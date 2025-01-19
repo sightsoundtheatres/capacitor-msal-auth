@@ -2,6 +2,7 @@ package com.hoangqwe.plugins.msal;
 
 import android.Manifest;
 import com.getcapacitor.JSObject;
+import com.getcapacitor.Logger;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -19,10 +20,15 @@ import org.json.JSONException;
 public class MsalPlugin extends Plugin {
 
     private MsalPluginManager implementation;
+    public static final String TAG = "MsalPlugin";
 
     @Override
     public void load() {
-        implementation = new MsalPluginManager(this.getActivity());
+        try {
+            implementation = new MsalPluginManager(this);
+        } catch (Exception exception) {
+            Logger.error(TAG, exception.getMessage(), exception);
+        }
     }
 
     @PluginMethod
@@ -71,12 +77,11 @@ public class MsalPlugin extends Plugin {
                 brokerRedirectUriRegistered,
                 scopes
             );
+
+            call.resolve();
         } catch (Exception e) {
             call.resolve();
         }
-
-
-        call.resolve();
     }
 
     @PluginMethod

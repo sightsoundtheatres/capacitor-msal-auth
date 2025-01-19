@@ -38,9 +38,9 @@ public class MsalPluginManager {
     private final AppCompatActivity activity;
     private List<String> scopes;
 
-    public MsalPluginManager(AppCompatActivity activity) {
+    public MsalPluginManager(MsalPlugin plugin) {
+        this.activity = plugin.getActivity();
         this.context = activity.getApplicationContext();
-        this.activity = activity;
     }
 
     public String echo(String value) {
