@@ -1,4 +1,5 @@
 import type { AccountInfo } from '@azure/msal-browser';
+import { PluginListenerHandle } from '@capacitor/core';
 
 interface AuthenticationResult {
   accessToken: string;
@@ -48,4 +49,8 @@ export interface MsalPluginPlugin {
   getAccounts(): Promise<{
     accounts: AccountInfo[];
   }>;
+  addListener(
+    eventName: 'accountChanged',
+    listenerFunc: () => void,
+  ): Promise<PluginListenerHandle>;
 }
