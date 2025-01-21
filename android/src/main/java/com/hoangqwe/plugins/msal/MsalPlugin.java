@@ -21,6 +21,7 @@ public class MsalPlugin extends Plugin {
 
     private MsalPluginManager implementation;
     public static final String TAG = "MsalPlugin";
+    public static final String MSAL_ACCOUNT_CHANGED_EVENT = "accountChanged";
 
     @Override
     public void load() {
@@ -80,6 +81,7 @@ public class MsalPlugin extends Plugin {
 
             call.resolve();
         } catch (Exception e) {
+            Logger.error(TAG, e.getMessage(), e);
             call.resolve();
         }
     }
@@ -91,6 +93,7 @@ public class MsalPlugin extends Plugin {
 
             implementation.login(identifier, call);
         } catch (InterruptedException | MsalException exception) {
+            Logger.error(TAG, exception.getMessage(), exception);
             call.reject("Error when logging in");
         }
     }
@@ -103,5 +106,9 @@ public class MsalPlugin extends Plugin {
     @PluginMethod
     public void getAccounts(final PluginCall call) {
         implementation.getAccounts(call);
+    }
+
+    public void notifyAccountChangedListener() {
+        notifyListeners(MSAL_ACCOUNT_CHANGED_EVENT, new JSObject());
     }
 }
