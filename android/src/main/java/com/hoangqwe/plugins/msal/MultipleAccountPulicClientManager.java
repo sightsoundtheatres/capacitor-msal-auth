@@ -4,9 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-
 import androidx.appcompat.app.AppCompatActivity;
-
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Logger;
@@ -21,19 +19,18 @@ import com.microsoft.identity.client.IPublicClientApplication;
 import com.microsoft.identity.client.Prompt;
 import com.microsoft.identity.client.PublicClientApplication;
 import com.microsoft.identity.client.exception.MsalException;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.util.Arrays;
 import java.util.List;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class MultipleAccountPulicClientManager implements IPublicClientManager {
+
     private IMultipleAccountPublicClientApplication instance;
     private final Context context;
     private final AppCompatActivity activity;
@@ -48,14 +45,14 @@ public class MultipleAccountPulicClientManager implements IPublicClientManager {
 
     @Override
     public void initializeInstance(
-            String clientId,
-            String domainHint,
-            String tenant,
-            AuthorityType authorityType,
-            String customAuthorityUrl,
-            String keyHash,
-            Boolean brokerRedirectUriRegistered,
-            List<String> scopes
+        String clientId,
+        String domainHint,
+        String tenant,
+        AuthorityType authorityType,
+        String customAuthorityUrl,
+        String keyHash,
+        Boolean brokerRedirectUriRegistered,
+        List<String> scopes
     ) throws MsalException, InterruptedException, IOException, JSONException {
         // Return the instance if it is already initialized
         if (this.instance != null) {
@@ -123,13 +120,11 @@ public class MultipleAccountPulicClientManager implements IPublicClientManager {
                 accountInfo.put("idToken", resultAccount.getIdToken());
                 accountInfo.put("authority", resultAccount.getAuthority());
 
-
                 call.resolve(accountInfo);
             } catch (Exception e) {
                 Logger.error("Error occurred during login", e);
                 call.reject("Error occurred during login");
             }
-
         });
     }
 
@@ -157,7 +152,7 @@ public class MultipleAccountPulicClientManager implements IPublicClientManager {
                             call.reject("Error occurred during getAccounts");
                         }
                     }
-            );
+                );
         } catch (Exception e) {
             Logger.error("Error occurred during getAccounts", e);
             call.reject("Error occurred during getAccounts");
@@ -186,7 +181,7 @@ public class MultipleAccountPulicClientManager implements IPublicClientManager {
                         call.reject("Error occurred during logOut");
                     }
                 }
-        );
+            );
     }
 
     private File writeJSONObjectConfig(JSONObject data) throws IOException {
@@ -214,8 +209,8 @@ public class MultipleAccountPulicClientManager implements IPublicClientManager {
 
     private void acquireTokenSilently(String identifier, final TokenResultCallback callback) throws MsalException, InterruptedException {
         AcquireTokenSilentParameters.Builder builder = new AcquireTokenSilentParameters.Builder()
-                .withScopes(this.scopes)
-                .fromAuthority(this.instance.getConfiguration().getDefaultAuthority().getAuthorityURL().toString());
+            .withScopes(this.scopes)
+            .fromAuthority(this.instance.getConfiguration().getDefaultAuthority().getAuthorityURL().toString());
 
         builder = builder.forAccount(this.instance.getAccount(identifier));
 
@@ -227,29 +222,29 @@ public class MultipleAccountPulicClientManager implements IPublicClientManager {
 
     private void acquireTokenInteractively(final TokenResultCallback callback) {
         AcquireTokenParameters.Builder params = new AcquireTokenParameters.Builder()
-                .startAuthorizationFromActivity(this.activity)
-                .withScopes(scopes)
-                .withPrompt(Prompt.SELECT_ACCOUNT)
-                .withCallback(
-                        new AuthenticationCallback() {
-                            @Override
-                            public void onCancel() {
-                                Logger.info("Login cancelled");
-                                callback.tokenReceived(null);
-                            }
+            .startAuthorizationFromActivity(this.activity)
+            .withScopes(scopes)
+            .withPrompt(Prompt.SELECT_ACCOUNT)
+            .withCallback(
+                new AuthenticationCallback() {
+                    @Override
+                    public void onCancel() {
+                        Logger.info("Login cancelled");
+                        callback.tokenReceived(null);
+                    }
 
-                            public void onSuccess(IAuthenticationResult authenticationResult) {
-                                Logger.info(authenticationResult.getAccessToken());
-                                callback.tokenReceived(authenticationResult);
-                            }
+                    public void onSuccess(IAuthenticationResult authenticationResult) {
+                        Logger.info(authenticationResult.getAccessToken());
+                        callback.tokenReceived(authenticationResult);
+                    }
 
-                            @Override
-                            public void onError(MsalException ex) {
-                                Logger.error("Unable to acquire token interactively", ex);
-                                callback.tokenReceived(null);
-                            }
-                        }
-                );
+                    @Override
+                    public void onError(MsalException ex) {
+                        Logger.error("Unable to acquire token interactively", ex);
+                        callback.tokenReceived(null);
+                    }
+                }
+            );
 
         this.instance.acquireToken(params.build());
     }
@@ -279,6 +274,6 @@ public class MultipleAccountPulicClientManager implements IPublicClientManager {
                 new IntentFilter("android.accounts.LOGIN_ACCOUNTS_CHANGED")
                 //[BUG] Removing account from settings page does not trigger the signout broadcast from broker.
                 //new IntentFilter("com.microsoft.identity.client.sharedmode.CURRENT_ACCOUNT_CHANGED")
-        );
+            );
     }
 }

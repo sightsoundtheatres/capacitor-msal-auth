@@ -1,6 +1,9 @@
 # capacitor-msal-auth
 
-This Capacitor plugin provides seamless integration with the Microsoft Authentication Library (MSAL), enabling secure multi-account login support for both web and mobile platforms. Easily manage authentication flows with Microsoft Azure AD and support multiple accounts within your app.
+This Capacitor plugin provides seamless integration with the Microsoft Authentication Library (MSAL), enabling secure multi-account login support for both web and mobile platforms. It also includes an intelligent feature that auto-detects if the device is a shared device and switches to a single-login mode accordingly. Easily manage authentication flows with Microsoft Azure AD and support multiple accounts within your app.
+
+## Developement
+
 
 ## Installation
 * `npm i capacitor-msal-auth`

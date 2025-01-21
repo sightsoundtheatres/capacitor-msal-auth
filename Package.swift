@@ -19,7 +19,7 @@ let package = Package(
             dependencies: [
                 .product(name: "Capacitor", package: "capacitor-swift-pm"),
                 .product(name: "Cordova", package: "capacitor-swift-pm"),
-                .product(name: "MSAL", package: "microsoft-authentication-library-for-objc") 
+                .product(name: "MSAL", package: "microsoft-authentication-library-for-objc")
             ],
             path: "ios/Sources/MsalPluginPlugin"),
         .testTarget(

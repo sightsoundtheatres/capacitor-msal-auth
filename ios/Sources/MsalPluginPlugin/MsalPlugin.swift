@@ -205,7 +205,7 @@ import MSAL
         ret["idToken"] = result.idToken
         ret["authority"] = result.authority.description
         ret["uniqueId"] = result.tenantProfile.identifier
-        
+
         ret["account"] = account
 
         call.resolve(ret)
