@@ -1,6 +1,5 @@
-package com.hoangqwe.plugins.msal;
+package com.sightsound.capacitor.msal;
 
-import android.util.Log;
 import com.getcapacitor.PluginCall;
 import com.microsoft.identity.client.exception.MsalException;
 import java.io.IOException;
@@ -15,11 +14,6 @@ public class MsalPluginManager {
 
     public MsalPluginManager(MsalPlugin plugin) {
         this.plugin = plugin;
-    }
-
-    public String echo(String value) {
-        Log.i("Echo", value);
-        return value;
     }
 
     public void initializePcaInstance(
@@ -37,7 +31,7 @@ public class MsalPluginManager {
             return;
         }
 
-        SingleAccountPulicClientManager singleAccountManager = new SingleAccountPulicClientManager(this.plugin);
+        SingleAccountPublicClientManager singleAccountManager = new SingleAccountPublicClientManager(this.plugin);
         singleAccountManager.initializeInstance(
             clientId,
             domainHint,
@@ -52,7 +46,7 @@ public class MsalPluginManager {
         if (singleAccountManager.isSharedDevice()) {
             this.publicClientManager = singleAccountManager;
         } else {
-            MultipleAccountPulicClientManager multipleAccountManager = new MultipleAccountPulicClientManager(this.plugin);
+            MultipleAccountPublicClientManager multipleAccountManager = new MultipleAccountPublicClientManager(this.plugin);
             multipleAccountManager.initializeInstance(
                 clientId,
                 domainHint,

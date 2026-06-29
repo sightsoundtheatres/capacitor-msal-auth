@@ -10,7 +10,6 @@ public class MsalPluginPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "MsalPluginPlugin"
     public let jsName = "MsalPlugin"
     public let pluginMethods: [CAPPluginMethod] = [
-        CAPPluginMethod(name: "echo", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "initializePcaInstance", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "login", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "logout", returnType: CAPPluginReturnPromise),
@@ -18,11 +17,10 @@ public class MsalPluginPlugin: CAPPlugin, CAPBridgedPlugin {
     ]
     private let implementation = MsalPlugin()
 
-    @objc func echo(_ call: CAPPluginCall) {
-        let value = call.getString("value") ?? ""
-        call.resolve([
-            "value": implementation.echo(value)
-        ])
+    public override func load() {
+        implementation.onAccountChanged = { [weak self] in
+            self?.notifyListeners("accountChanged", data: [:])
+        }
     }
 
     @objc func initializePcaInstance(_ call: CAPPluginCall) {

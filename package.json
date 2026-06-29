@@ -1,6 +1,6 @@
 {
   "name": "capacitor-msal-auth",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "This Capacitor plugin provides seamless integration with the Microsoft Authentication Library (MSAL), enabling secure multi-account login support for both web and mobile platforms. Easily manage authentication flows with Microsoft Azure AD and support multiple accounts within your app.",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
@@ -15,7 +15,10 @@
     "Package.swift",
     "CapacitorMsalAuth.podspec"
   ],
-  "author": "hoangqwe159",
+  "author": "Sight & Sound Theatres",
+  "contributors": [
+    "hoangqwe159 (original author)"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -57,7 +60,10 @@
     "@ionic/eslint-config": "^0.4.0",
     "@ionic/prettier-config": "^4.0.0",
     "@ionic/swiftlint-config": "^2.0.0",
-    "eslint": "^10.6.0",
+    "@typescript-eslint/eslint-plugin": "^5.62.0",
+    "@typescript-eslint/parser": "^5.62.0",
+    "eslint": "^8.57.1",
+    "eslint-plugin-import": "^2.32.0",
     "prettier": "^3.9.3",
     "prettier-plugin-java": "^2.10.1",
     "rimraf": "^6.1.3",

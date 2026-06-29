@@ -1,10 +1,9 @@
-package com.hoangqwe.plugins.msal;
+package com.sightsound.capacitor.msal;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -15,7 +14,8 @@ import com.microsoft.identity.client.AcquireTokenSilentParameters;
 import com.microsoft.identity.client.AuthenticationCallback;
 import com.microsoft.identity.client.IAccount;
 import com.microsoft.identity.client.IAuthenticationResult;
-import com.microsoft.identity.client.ISingleAccountPublicClientApplication;
+import com.microsoft.identity.client.IMultipleAccountPublicClientApplication;
+import com.microsoft.identity.client.IPublicClientApplication;
 import com.microsoft.identity.client.Prompt;
 import com.microsoft.identity.client.PublicClientApplication;
 import com.microsoft.identity.client.exception.MsalException;
@@ -29,18 +29,18 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public class SingleAccountPulicClientManager implements IPublicClientManager {
+public class MultipleAccountPublicClientManager implements IPublicClientManager {
 
-    private ISingleAccountPublicClientApplication instance;
+    private IMultipleAccountPublicClientApplication instance;
     private final Context context;
-    private final MsalPlugin plugin;
     private final AppCompatActivity activity;
     private List<String> scopes;
 
-    public SingleAccountPulicClientManager(MsalPlugin plugin) {
+    private MsalPlugin plugin;
+
+    public MultipleAccountPublicClientManager(MsalPlugin plugin) {
         this.activity = plugin.getActivity();
         this.context = this.activity.getApplicationContext();
-        this.plugin = plugin;
     }
 
     @Override
@@ -59,7 +59,7 @@ public class SingleAccountPulicClientManager implements IPublicClientManager {
             return;
         }
 
-        String tenantId = (tenant != null ? tenant : "common");
+        String tenantId = tenant != null ? tenant : "common";
         String authorityUrl = customAuthorityUrl != null ? customAuthorityUrl : "https://login.microsoftonline.com/" + tenantId;
         String urlEncodedKeyHash = URLEncoder.encode(keyHash, "UTF-8");
         String redirectUri = "msauth://" + this.context.getPackageName() + "/" + urlEncodedKeyHash;
@@ -71,7 +71,7 @@ public class SingleAccountPulicClientManager implements IPublicClientManager {
             case AAD:
                 authorityConfig.put("type", AuthorityType.AAD.name());
                 authorityConfig.put("authority_url", authorityUrl);
-                authorityConfig.put("audience", (new JSONObject()).put("type", "AzureADMultipleOrgs").put("tenant_id", tenantId));
+                authorityConfig.put("audience", new JSONObject().put("type", "AzureADMultipleOrgs").put("tenant_id", tenantId));
                 configFile.put("broker_redirect_uri_registered", brokerRedirectUriRegistered);
                 break;
             case B2C:
@@ -85,13 +85,12 @@ public class SingleAccountPulicClientManager implements IPublicClientManager {
         configFile.put("domain_hint", domainHint);
         configFile.put("authorization_user_agent", "DEFAULT");
         configFile.put("redirect_uri", redirectUri);
-        configFile.put("account_mode", "SINGLE");
-        configFile.put("authorities", (new JSONArray()).put(authorityConfig));
+        configFile.put("account_mode", "MULTIPLE");
+        configFile.put("authorities", new JSONArray().put(authorityConfig));
 
         File config = writeJSONObjectConfig(configFile);
-        this.instance = PublicClientApplication.createSingleAccountPublicClientApplication(this.context, config);
+        this.instance = PublicClientApplication.createMultipleAccountPublicClientApplication(this.context, config);
         this.scopes = scopes;
-
         this.registerAccountChangeBroadcastReceiver();
 
         if (!config.delete()) {
@@ -103,7 +102,7 @@ public class SingleAccountPulicClientManager implements IPublicClientManager {
 
     @Override
     public void login(String identifier, PluginCall call) throws MsalException, InterruptedException {
-        acquireToken(identifier, result -> {
+        acquireToken(identifier, (result) -> {
             try {
                 JSObject accountInfo = new JSObject();
 
@@ -132,14 +131,28 @@ public class SingleAccountPulicClientManager implements IPublicClientManager {
     @Override
     public void getAccounts(PluginCall call) {
         try {
-            IAccount currentAccount = this.instance.getCurrentAccount().getCurrentAccount();
-            JSArray accountsArray = new JSArray();
-            accountsArray.put(this.getJSObjectAccount(currentAccount));
+            this.instance.getAccounts(
+                new IPublicClientApplication.LoadAccountsCallback() {
+                    @Override
+                    public void onTaskCompleted(List<IAccount> result) {
+                        JSArray accountsArray = new JSArray();
+                        for (IAccount account : result) {
+                            accountsArray.put(getJSObjectAccount(account));
+                        }
 
-            JSObject response = new JSObject();
-            response.put("accounts", accountsArray);
+                        JSObject response = new JSObject();
+                        response.put("accounts", accountsArray);
 
-            call.resolve(response);
+                        call.resolve(response);
+                    }
+
+                    @Override
+                    public void onError(MsalException exception) {
+                        Logger.error("Error occurred during getAccounts", exception);
+                        call.reject("Error occurred during getAccounts");
+                    }
+                }
+            );
         } catch (Exception e) {
             Logger.error("Error occurred during getAccounts", e);
             call.reject("Error occurred during getAccounts");
@@ -148,37 +161,31 @@ public class SingleAccountPulicClientManager implements IPublicClientManager {
 
     @Override
     public void logout(PluginCall call) {
-        try {
-            if (this.instance.getCurrentAccount() == null) {
-                call.reject("Nothing to sign out from");
-            } else {
-                this.instance.signOut(
-                        new ISingleAccountPublicClientApplication.SignOutCallback() {
-                            @Override
-                            public void onSignOut() {
-                                call.resolve();
-                            }
-
-                            @Override
-                            public void onError(@NonNull MsalException exception) {
-                                Logger.error("Error occurred during logout", exception);
-                                call.reject("Error occurred during logout");
-                            }
+        this.instance.getAccounts(
+            new IPublicClientApplication.LoadAccountsCallback() {
+                @Override
+                public void onTaskCompleted(List<IAccount> result) {
+                    for (IAccount account : result) {
+                        try {
+                            instance.removeAccount(account);
+                        } catch (MsalException | InterruptedException e) {
+                            call.reject("Error when logging out");
                         }
-                    );
-            }
-        } catch (Exception e) {
-            Logger.error("Error occurred during logout", e);
-            call.reject("Error occurred during logout");
-        }
-    }
+                    }
+                    call.resolve(null);
+                }
 
-    public boolean isSharedDevice() {
-        return instance.isSharedDevice();
+                @Override
+                public void onError(MsalException exception) {
+                    Logger.error("Error occurred during logOut", exception);
+                    call.reject("Error occurred during logOut");
+                }
+            }
+        );
     }
 
     private File writeJSONObjectConfig(JSONObject data) throws IOException {
-        File config = new File(this.context.getFilesDir() + "auth_single_config.json");
+        File config = new File(this.context.getFilesDir() + "auth_multiple_config.json");
 
         try (FileWriter writer = new FileWriter(config, false)) {
             writer.write(data.toString());
@@ -201,27 +208,22 @@ public class SingleAccountPulicClientManager implements IPublicClientManager {
     }
 
     private void acquireTokenSilently(String identifier, final TokenResultCallback callback) throws MsalException, InterruptedException {
-        IAccount currentAccount = this.instance.getCurrentAccount().getCurrentAccount();
+        AcquireTokenSilentParameters.Builder builder = new AcquireTokenSilentParameters.Builder()
+            .withScopes(this.scopes)
+            .fromAuthority(this.instance.getConfiguration().getDefaultAuthority().getAuthorityURL().toString());
 
-        if (currentAccount != null) {
-            AcquireTokenSilentParameters.Builder builder = new AcquireTokenSilentParameters.Builder()
-                .withScopes(this.scopes)
-                .fromAuthority(this.instance.getConfiguration().getDefaultAuthority().getAuthorityURL().toString())
-                .forAccount(this.instance.getCurrentAccount().getCurrentAccount());
+        builder = builder.forAccount(this.instance.getAccount(identifier));
 
-            AcquireTokenSilentParameters parameters = builder.build();
-            IAuthenticationResult silentAuthResult = this.instance.acquireTokenSilent(parameters);
+        AcquireTokenSilentParameters parameters = builder.build();
+        IAuthenticationResult silentAuthResult = this.instance.acquireTokenSilent(parameters);
 
-            callback.tokenReceived(silentAuthResult);
-        } else {
-            throw new InterruptedException("No account found");
-        }
+        callback.tokenReceived(silentAuthResult);
     }
 
     private void acquireTokenInteractively(final TokenResultCallback callback) {
         AcquireTokenParameters.Builder params = new AcquireTokenParameters.Builder()
             .startAuthorizationFromActivity(this.activity)
-            .withScopes(this.scopes)
+            .withScopes(scopes)
             .withPrompt(Prompt.SELECT_ACCOUNT)
             .withCallback(
                 new AuthenticationCallback() {
@@ -262,16 +264,16 @@ public class SingleAccountPulicClientManager implements IPublicClientManager {
 
     private void registerAccountChangeBroadcastReceiver() {
         this.context.registerReceiver(
-                new BroadcastReceiver() {
-                    @Override
-                    public void onReceive(Context context, Intent intent) {
-                        plugin.notifyAccountChangedListener();
-                        Logger.info(MsalPlugin.TAG, "Received broadcast");
-                    }
-                },
-                new IntentFilter("android.accounts.LOGIN_ACCOUNTS_CHANGED")
-                //[BUG] Removing account from settings page does not trigger the signout broadcast from broker.
-                //new IntentFilter("com.microsoft.identity.client.sharedmode.CURRENT_ACCOUNT_CHANGED")
-            );
+            new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    plugin.notifyAccountChangedListener();
+                    Logger.info(MsalPlugin.TAG, "Received broadcast");
+                }
+            },
+            new IntentFilter("android.accounts.LOGIN_ACCOUNTS_CHANGED")
+            //[BUG] Removing account from settings page does not trigger the signout broadcast from broker.
+            //new IntentFilter("com.microsoft.identity.client.sharedmode.CURRENT_ACCOUNT_CHANGED")
+        );
     }
 }

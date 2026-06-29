@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "CapacitorMsalAuth",
-    platforms: [.iOS(.v14)],
+    platforms: [.iOS(.v16)],
     products: [
         .library(
             name: "CapacitorMsalAuth",
@@ -11,7 +11,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", branch: "main"),
-        .package(url: "https://github.com/AzureAD/microsoft-authentication-library-for-objc.git", from: "1.1.0")
+        .package(url: "https://github.com/AzureAD/microsoft-authentication-library-for-objc.git", from: "2.13.0")
     ],
     targets: [
         .target(

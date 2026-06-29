@@ -1,4 +1,4 @@
-package com.hoangqwe.plugins.msal;
+package com.sightsound.capacitor.msal;
 
 import com.microsoft.identity.client.IAuthenticationResult;
 

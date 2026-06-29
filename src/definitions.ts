@@ -42,7 +42,6 @@ export interface LoginOptions extends BaseOptions {
 }
 export declare type LogoutOptions = BaseOptions;
 export interface MsalPluginPlugin {
-  echo(options: { value: string }): Promise<{ value: string }>;
   initializePcaInstance(options: BaseOptions): Promise<void>;
   login(account?: { identifier?: string }): Promise<AuthenticationResult>;
   logout(): Promise<void>;

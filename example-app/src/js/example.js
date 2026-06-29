@@ -1,21 +1,37 @@
 import { MsalPlugin } from 'capacitor-msal-auth';
 
-window.testEcho = async () => {
-  const inputValue = document.getElementById('echoInput').value;
-  MsalPlugin.echo({ value: inputValue });
+const log = (label, data) => {
+  const out = document.getElementById('output');
+  out.textContent = `${label}: ${JSON.stringify(data, null, 2)}`;
+  console.log(label, data);
+};
 
+// Fired on all platforms after an interactive login or a logout.
+MsalPlugin.addListener('accountChanged', () => {
+  log('accountChanged', 'accounts changed');
+});
+
+window.testInitialize = async () => {
   await MsalPlugin.initializePcaInstance({
-    clientId: '8a165335-2691-493a-bfbb-6ba5a27b44f0',
-    authorityUrl: 'https://login.microsoftonline.com/fd5a5762-9274-4086-aefb-aca071a100b3/',
-    // tenant: 'fd5a5762-9274-4086-aefb-aca071a100b3',
-    domainHint: 'trinoor.com',
+    clientId: '<your-client-id>',
+    authorityUrl: 'https://login.microsoftonline.com/<your-tenant-id>/',
     scopes: ['User.Read'],
-    keyHash: 'VzSiQcXRmi2kyjzcA+mYLEtbGVs=',
+    keyHash: '<your-android-key-hash>',
   });
+  log('initialize', 'done');
+};
 
-  // await MsalPlugin.login();
+window.testLogin = async () => {
+  const result = await MsalPlugin.login();
+  log('login', result);
+};
 
-  // const accounts = await MsalPlugin.getAccounts();
+window.testGetAccounts = async () => {
+  const accounts = await MsalPlugin.getAccounts();
+  log('getAccounts', accounts);
+};
 
-  // console.log('accounts', accounts);
+window.testLogout = async () => {
+  await MsalPlugin.logout();
+  log('logout', 'done');
 };

@@ -1,4 +1,4 @@
-package com.hoangqwe.plugins.msal;
+package com.sightsound.capacitor.msal;
 
 import android.Manifest;
 import com.getcapacitor.JSObject;
@@ -30,15 +30,6 @@ public class MsalPlugin extends Plugin {
         } catch (Exception exception) {
             Logger.error(TAG, exception.getMessage(), exception);
         }
-    }
-
-    @PluginMethod
-    public void echo(PluginCall call) {
-        String value = call.getString("value");
-
-        JSObject ret = new JSObject();
-        ret.put("value", implementation.echo(value));
-        call.resolve(ret);
     }
 
     @PluginMethod

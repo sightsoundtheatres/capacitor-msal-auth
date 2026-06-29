@@ -11,10 +11,8 @@ import MSAL
     private var redirectUri: String?
     private var bridgeViewController: UIViewController?
 
-    @objc public func echo(_ value: String) -> String {
-        print(value)
-        return value
-    }
+    /// Invoked when the set of signed-in accounts changes (after an interactive login or a logout).
+    var onAccountChanged: (() -> Void)?
 
     @objc public func initializePcaInstance(_ call: CAPPluginCall, bridgeViewController: UIViewController) {
         guard let _clientID = call.getString("clientId") else {
@@ -80,6 +78,7 @@ import MSAL
             for account in accounts {
                 try applicationContext.removeAccount(account)
             }
+            self.onAccountChanged?()
             call.resolve()
         } catch {
             call.reject("Failed to logout: \(error.localizedDescription)")
@@ -177,6 +176,7 @@ import MSAL
                 call.reject("Failed to acquire token interactively")
                 return
             }
+            self.onAccountChanged?()
             self.handleAuthenticationResult(result: result, call: call)
         }
     }

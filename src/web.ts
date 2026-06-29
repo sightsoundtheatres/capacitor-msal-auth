@@ -8,11 +8,6 @@ let instance: IPublicClientApplication | undefined;
 export class MsalPluginWeb extends WebPlugin implements MsalPluginPlugin {
   private baseConfig: BaseOptions | undefined;
 
-  async echo(options: { value: string }): Promise<{ value: string }> {
-    console.log('ECHO', options);
-    return options;
-  }
-
   public async initializePcaInstance(options: BaseOptions): Promise<void> {
     if (instance) return;
 
@@ -66,7 +61,8 @@ export class MsalPluginWeb extends WebPlugin implements MsalPluginPlugin {
       throw new Error('PublicClientApplication not initialized');
     }
 
-    return await instance.logoutPopup();
+    await instance.logoutPopup();
+    this.notifyListeners('accountChanged', {});
   }
 
   public async getAccounts(): Promise<{
@@ -88,11 +84,13 @@ export class MsalPluginWeb extends WebPlugin implements MsalPluginPlugin {
       throw new Error('BaseOptions not initialized');
     }
 
-    return await instance.loginPopup({
+    const result = await instance.loginPopup({
       scopes: this.baseConfig?.scopes ?? [],
       ...(this.baseConfig?.domainHint ? { extraQueryParameters: { domain_hint: this.baseConfig.domainHint } } : {}),
       prompt: 'select_account',
     });
+    this.notifyListeners('accountChanged', {});
+    return result;
   }
 
   private async acquireTokenSilently(account: AccountInfo): Promise<AuthenticationResult> {
