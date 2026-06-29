@@ -9,7 +9,7 @@ on:
 jobs:
   web:
     name: Lint + Verify Web
-    runs-on: ubuntu-26.04-arm
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
@@ -23,7 +23,7 @@ jobs:
 
   android:
     name: Verify Android
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v6

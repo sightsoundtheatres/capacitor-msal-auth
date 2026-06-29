@@ -8,7 +8,7 @@ on:
 jobs:
   publish:
     name: Publish to GitHub Packages
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
