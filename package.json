@@ -1,5 +1,5 @@
 {
-  "name": "capacitor-msal-auth",
+  "name": "@sightsoundtheatres/capacitor-msal-auth",
   "version": "0.2.0",
   "description": "This Capacitor plugin provides seamless integration with the Microsoft Authentication Library (MSAL), enabling secure multi-account login support for both web and mobile platforms. Easily manage authentication flows with Microsoft Azure AD and support multiple accounts within your app.",
   "main": "dist/plugin.cjs.js",
@@ -20,6 +20,9 @@
     "hoangqwe159 (original author)"
   ],
   "license": "MIT",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sightsoundtheatres/capacitor-msal-auth.git"

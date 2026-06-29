@@ -10,7 +10,7 @@ let package = Package(
             targets: ["MsalPluginPlugin"])
     ],
     dependencies: [
-        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", branch: "main"),
+        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", from: "8.4.0"),
         .package(url: "https://github.com/AzureAD/microsoft-authentication-library-for-objc.git", from: "2.13.0")
     ],
     targets: [

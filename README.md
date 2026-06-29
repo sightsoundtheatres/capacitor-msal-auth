@@ -2,24 +2,50 @@
 
 This Capacitor plugin provides seamless integration with the Microsoft Authentication Library (MSAL), enabling secure multi-account login support for both web and mobile platforms. It also includes an intelligent feature that auto-detects if the device is a shared device and switches to a single-login mode accordingly. Easily manage authentication flows with Microsoft Azure AD and support multiple accounts within your app.
 
-## Developement
+## Development
 - **Capacitor Plugin Development Workflow**: https://capacitorjs.com/docs/plugins/workflow
-- npm i
-- npm run build
-- npm publish
+- `npm i`
+- `npm run build`
+
+## Releasing
+Releases publish to GitHub Packages automatically via `.github/workflows/release.yml` on a version tag:
+1. `npm version <patch|minor|major>` (creates the version commit and `vX.Y.Z` tag)
+2. `git push --follow-tags`
+3. The `Release` workflow runs `npm publish` to `https://npm.pkg.github.com` using the built-in `GITHUB_TOKEN`.
 
 ## Local Testing
-- npm run build
-- bun link
+- `npm run build`
+- `npm link`
 
-Add the package in dependencies in your package.json file:
+Add the package in dependencies in your `package.json` file:
 ```
-"capacitor-msal-auth": "link:capacitor-msal-auth"
+"@sightsoundtheatres/capacitor-msal-auth": "link:@sightsoundtheatres/capacitor-msal-auth"
 ```
 
 ## Installation
-* `npm i capacitor-msal-auth`
+
+This package is published to **GitHub Packages**, which requires authentication to install — even
+though the repository is public. In your app, create an `.npmrc` (next to `package.json`) that
+points the `@sightsoundtheatres` scope at GitHub Packages:
+
+```
+@sightsoundtheatres:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+```
+
+`GITHUB_TOKEN` must be a [personal access token](https://github.com/settings/tokens) with the
+`read:packages` scope (export it in your shell, or replace `${GITHUB_TOKEN}` with the token value).
+
+Then install and sync:
+
+* `npm i @sightsoundtheatres/capacitor-msal-auth`
 * `npx cap sync`
+
+`npx cap sync` automatically wires the plugin's Swift package into your app on iOS (Swift Package
+Manager) and its Gradle module on Android — no manual Xcode/SPM dependency setup is required.
+
+Continue with the platform setup below:
+
 * Create an app registration: https://learn.microsoft.com/en-us/entra/identity-platform/scenario-spa-app-registration
 * In the app registration, go to Authentication, and then Add platform, and then iOS/macOS
 * You will be asked for a bundle identifier, which you can find in Xcode (under the General tab of your project)

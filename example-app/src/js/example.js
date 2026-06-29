@@ -1,4 +1,4 @@
-import { MsalPlugin } from 'capacitor-msal-auth';
+import { MsalPlugin } from '@sightsoundtheatres/capacitor-msal-auth';
 
 const log = (label, data) => {
   const out = document.getElementById('output');

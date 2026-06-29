@@ -16,7 +16,7 @@
     "@capacitor/core": "latest",
     "@capacitor/camera": "latest",
     "@capacitor/splash-screen": "latest",
-    "capacitor-msal-auth": "file:..",
+    "@sightsoundtheatres/capacitor-msal-auth": "file:..",
     "@capacitor/ios": "^8.0.0",
     "@capacitor/android": "^8.0.0"
   },
