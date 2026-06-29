@@ -17,12 +17,12 @@
     "@capacitor/camera": "latest",
     "@capacitor/splash-screen": "latest",
     "capacitor-msal-auth": "file:..",
-    "@capacitor/ios": "^6.0.0",
-    "@capacitor/android": "^6.0.0"
+    "@capacitor/ios": "^8.0.0",
+    "@capacitor/android": "^8.0.0"
   },
   "devDependencies": {
     "@capacitor/cli": "latest",
-    "vite": "^5.4.2"
+    "vite": "^8.1.0"
   },
   "author": "",
   "license": "ISC"

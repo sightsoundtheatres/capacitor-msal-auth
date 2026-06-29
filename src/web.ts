@@ -41,10 +41,11 @@ export class MsalPluginWeb extends WebPlugin implements MsalPluginPlugin {
 
     try {
       if (accountData?.identifier) {
+        const identifier = accountData.identifier;
         const account =
-          instance.getAccountByHomeId(accountData.identifier) ||
-          instance.getAccountByLocalId(accountData.identifier) ||
-          instance.getAccountByUsername(accountData.identifier);
+          instance.getAccount({ homeAccountId: identifier }) ||
+          instance.getAccount({ localAccountId: identifier }) ||
+          instance.getAccount({ username: identifier });
 
         if (account) {
           return await this.acquireTokenSilently(account).catch(async () => {
