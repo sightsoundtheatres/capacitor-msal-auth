@@ -76,7 +76,7 @@ import MSAL
         do {
             let accounts = try applicationContext.allAccounts()
             for account in accounts {
-                try applicationContext.removeAccount(account)
+                try applicationContext.remove(account)
             }
             self.onAccountChanged?()
             call.resolve()
@@ -121,9 +121,9 @@ import MSAL
             return
         }
 
-        if let account = try? applicationContext.accountForUsername(identifier) {
+        if let account = try? applicationContext.account(forUsername: identifier) {
             acquireTokenSilentlyWithAccount(account: account, call: call)
-        } else if let account = try? applicationContext.accountForIdentifier(identifier) {
+        } else if let account = try? applicationContext.account(forIdentifier: identifier) {
             acquireTokenSilentlyWithAccount(account: account, call: call)
         } else {
             acquireTokenInteractively(call: call)
@@ -137,7 +137,7 @@ import MSAL
         }
 
         let parameters = MSALSilentTokenParameters(scopes: self.scopes, account: account)
-        applicationContext.acquireTokenSilentWithParameters(parameters) { (result, error) in
+        applicationContext.acquireTokenSilent(with: parameters) { (result, error) in
             if error != nil {
                 self.acquireTokenInteractively(call: call)
                 return
@@ -167,7 +167,7 @@ import MSAL
 
         parameters.promptType = .selectAccount
 
-        applicationContext.acquireTokenWithParameters(parameters) { (result, error) in
+        applicationContext.acquireToken(with: parameters) { (result, error) in
             if error != nil {
                 call.reject("Failed to acquire token interactively")
                 return
