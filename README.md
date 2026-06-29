@@ -24,6 +24,12 @@ Add the package in dependencies in your `package.json` file:
 
 ## Installation
 
+> **Onboarding into an app?** See [`ONBOARDING.md`](./ONBOARDING.md) for the full consumer setup
+> guide. If you use Claude Code, this package also ships a skill at
+> `.claude/skills/onboard-capacitor-msal-auth` that automates the steps below — copy it into your
+> app's `.claude/skills/` (from `node_modules/@sightsoundtheatres/capacitor-msal-auth/.claude/skills/`)
+> and ask Claude to "onboard capacitor-msal-auth".
+
 This package is published to **GitHub Packages**, which requires authentication to install — even
 though the repository is public. In your app, create an `.npmrc` (next to `package.json`) that
 points the `@sightsoundtheatres` scope at GitHub Packages:
@@ -84,7 +90,7 @@ allprojects {
 ```java
 import com.getcapacitor.BridgeActivity;
 import android.os.Bundle;
-import com.hoangqwe.plugins.msal.MsalPlugin;
+import com.sightsound.capacitor.msal.MsalPlugin;
 
 public class MainActivity extends BridgeActivity {
     @Override
@@ -437,28 +443,130 @@ Account object with the following signature:
 - tenantProfiles         - <a href="#map">Map</a> of tenant profile objects for each tenant that the account has authenticated with in the browser
 - dataBoundary           - Data boundary extracted from clientInfo
 
-<code>{ homeAccountId: string; environment: string; tenantId: string; username: string; localAccountId: string; loginHint?: string; name?: string; upn?: string; idToken?: string; idTokenClaims?: <a href="#tokenclaims">TokenClaims</a> & { [key: string]: string | number | string[] | object | unknown; }; nativeAccountId?: string; authorityType?: string; tenantProfiles?: <a href="#map">Map</a>&lt;string, <a href="#tenantprofile">TenantProfile</a>&gt;; dataBoundary?: <a href="#databoundary">DataBoundary</a>; /** * Indicates whether the user selected "Keep Me Signed In" (KMSI) during authentication. * Derived from the signin_state claim in the ID token. */ kmsi?: boolean; }</code>
+<code>{
+ homeAccountId: string;
+ environment: string;
+ tenantId: string;
+ username: string;
+ localAccountId: string;
+ loginHint?: string;
+ name?: string;
+ upn?: string;
+ idToken?: string;
+ idTokenClaims?: <a href="#tokenclaims">TokenClaims</a> & {
+ [key: string]: string | number | string[] | object | unknown;
+ };
+ nativeAccountId?: string;
+ authorityType?: string;
+ tenantProfiles?: <a href="#map">Map</a>&lt;string, <a href="#tenantprofile">TenantProfile</a>&gt;;
+ dataBoundary?: <a href="#databoundary">DataBoundary</a>;
+ /**
+ * Indicates whether the user selected "Keep Me Signed In" (KMSI) during authentication.
+ * Derived from the signin_state claim in the ID token.
+ */
+ kmsi?: boolean;
+ }</code>
 
 
 #### TokenClaims
 
 Type which describes Id Token claims known by MSAL.
 
-<code>{ /** * Audience */ aud?: string; /** * Issuer */ iss?: string; /** * Issued at */ iat?: number; /** * Not valid before */ nbf?: number; /** * Immutable object identifier, this ID uniquely identifies the user across applications */ oid?: string; /** * Immutable subject identifier, this is a pairwise identifier - it is unique to a particular application ID */ sub?: string; /** * Users' tenant or '9188040d-6c67-4c5b-b112-36a304b66dad' for personal accounts. */ tid?: string; /** * Trusted Framework Policy (B2C) The name of the policy that was used to acquire the ID token. */ tfp?: string; /** * Authentication Context Class Reference (B2C) Used only with older policies. */ acr?: string; ver?: string; upn?: string; preferred_username?: string; login_hint?: string; /** * Contains KMSI (Keep Me Signed In) status among other things */ signin_state?: <a href="#array">Array</a>&lt;string&gt;; emails?: string[]; name?: string; nonce?: string; /** * Expiration */ exp?: number; home_oid?: string; sid?: string; cloud_instance_host_name?: string; cnf?: { kid: string; }; x5c_ca?: string[]; ts?: number; at?: string; u?: string; p?: string; m?: string; roles?: string[]; amr?: string[]; idp?: string; auth_time?: number; /** * 	Region of the resource tenant */ tenant_region_scope?: string; tenant_region_sub_scope?: string; }</code>
+<code>{
+ /**
+ * Audience
+ */
+ aud?: string;
+ /**
+ * Issuer
+ */
+ iss?: string;
+ /**
+ * Issued at
+ */
+ iat?: number;
+ /**
+ * Not valid before
+ */
+ nbf?: number;
+ /**
+ * Immutable object identifier, this ID uniquely identifies the user across applications
+ */
+ oid?: string;
+ /**
+ * Immutable subject identifier, this is a pairwise identifier - it is unique to a particular application ID
+ */
+ sub?: string;
+ /**
+ * Users' tenant or '9188040d-6c67-4c5b-b112-36a304b66dad' for personal accounts.
+ */
+ tid?: string;
+ /**
+ * Trusted Framework Policy (B2C) The name of the policy that was used to acquire the ID token.
+ */
+ tfp?: string;
+ /**
+ * Authentication Context Class Reference (B2C) Used only with older policies.
+ */
+ acr?: string;
+ ver?: string;
+ upn?: string;
+ preferred_username?: string;
+ login_hint?: string;
+ /**
+ * Contains KMSI (Keep Me Signed In) status among other things
+ */
+ signin_state?: <a href="#array">Array</a>&lt;string&gt;;
+ emails?: string[];
+ name?: string;
+ nonce?: string;
+ /**
+ * Expiration
+ */
+ exp?: number;
+ home_oid?: string;
+ sid?: string;
+ cloud_instance_host_name?: string;
+ cnf?: {
+ kid: string;
+ };
+ x5c_ca?: string[];
+ ts?: number;
+ at?: string;
+ u?: string;
+ p?: string;
+ m?: string;
+ roles?: string[];
+ amr?: string[];
+ idp?: string;
+ auth_time?: number;
+ /**
+ * 	Region of the resource tenant
+ */
+ tenant_region_scope?: string;
+ tenant_region_sub_scope?: string;
+ }</code>
 
 
 #### TenantProfile
 
 Account details that vary across tenants for the same user
 
-<code><a href="#pick">Pick</a>&lt;<a href="#accountinfo">AccountInfo</a>, "tenantId" | "localAccountId" | "name" | "username" | "loginHint" | "upn" | "nativeAccountId"&gt; & { /** * - isHomeTenant - True if this is the home tenant profile of the account, false if it's a guest tenant profile */ isHomeTenant?: boolean; }</code>
+<code><a href="#pick">Pick</a>&lt;<a href="#accountinfo">AccountInfo</a>, "tenantId" | "localAccountId" | "name" | "username" | "loginHint" | "upn" | "nativeAccountId"&gt; & {
+ /**
+ * - isHomeTenant - True if this is the home tenant profile of the account, false if it's a guest tenant profile
+ */
+ isHomeTenant?: boolean;
+ }</code>
 
 
 #### Pick
 
 From T, pick a set of properties whose keys are in the union K
 
-<code>{ [P in K]: T[P]; }</code>
+<code>{
+ [P in K]: T[P];
+ }</code>
 
 
 #### DataBoundary
@@ -484,6 +592,29 @@ Result returned from the authority's token endpoint.
 - familyId               - Family ID identifier, usually only used for refresh tokens
 - requestId              - Request ID returned as part of the response
 
-<code>{ authority: string; uniqueId: string; tenantId: string; scopes: <a href="#array">Array</a>&lt;string&gt;; account: <a href="#accountinfo">AccountInfo</a> | null; idToken: string; idTokenClaims: object; accessToken: string; fromCache: boolean; expiresOn: <a href="#date">Date</a> | null; extExpiresOn?: <a href="#date">Date</a>; refreshOn?: <a href="#date">Date</a>; tokenType: string; correlationId: string; requestId?: string; state?: string; familyId?: string; cloudGraphHostName?: string; msGraphHost?: string; code?: string; fromPlatformBroker?: boolean; resource?: string; }</code>
+<code>{
+ authority: string;
+ uniqueId: string;
+ tenantId: string;
+ scopes: <a href="#array">Array</a>&lt;string&gt;;
+ account: <a href="#accountinfo">AccountInfo</a> | null;
+ idToken: string;
+ idTokenClaims: object;
+ accessToken: string;
+ fromCache: boolean;
+ expiresOn: <a href="#date">Date</a> | null;
+ extExpiresOn?: <a href="#date">Date</a>;
+ refreshOn?: <a href="#date">Date</a>;
+ tokenType: string;
+ correlationId: string;
+ requestId?: string;
+ state?: string;
+ familyId?: string;
+ cloudGraphHostName?: string;
+ msGraphHost?: string;
+ code?: string;
+ fromPlatformBroker?: boolean;
+ resource?: string;
+ }</code>
 
 </docgen-api>

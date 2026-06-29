@@ -13,7 +13,9 @@
     "ios/Sources",
     "ios/Tests",
     "Package.swift",
-    "CapacitorMsalAuth.podspec"
+    "CapacitorMsalAuth.podspec",
+    "ONBOARDING.md",
+    ".claude/skills/"
   ],
   "author": "Sight & Sound Theatres",
   "contributors": [
