@@ -281,8 +281,7 @@ public class SingleAccountPublicClientManager implements IPublicClientManager {
         return result;
     }
 
-    private static final String MSAL_ACCOUNT_CHANGED_ACTION =
-        "com.microsoft.identity.client.sharedmode.CURRENT_ACCOUNT_CHANGED";
+    private static final String MSAL_ACCOUNT_CHANGED_ACTION = "com.microsoft.identity.client.sharedmode.CURRENT_ACCOUNT_CHANGED";
 
     private void registerAccountChangeBroadcastReceiver() {
         if (mAccountChangedReceiver != null) {
