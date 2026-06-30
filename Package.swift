@@ -2,11 +2,11 @@
 import PackageDescription
 
 let package = Package(
-    name: "CapacitorMsalAuth",
+    name: "SightsoundtheatresCapacitorMsalAuth",
     platforms: [.iOS(.v16)],
     products: [
         .library(
-            name: "CapacitorMsalAuth",
+            name: "SightsoundtheatresCapacitorMsalAuth",
             targets: ["MsalPluginPlugin"])
     ],
     dependencies: [
