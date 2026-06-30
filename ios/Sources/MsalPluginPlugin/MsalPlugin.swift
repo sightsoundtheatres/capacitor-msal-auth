@@ -8,6 +8,8 @@ import MSAL
     private var authorityType: String?
     private var authorityUrl: URL?
     private var scopes: [String] = []
+    private var domainHint: String?
+    private var loginHint: String?
     private var redirectUri: String?
     private var bridgeViewController: UIViewController?
 
@@ -39,6 +41,8 @@ import MSAL
         self.authorityUrl = _authorityURL
         self.scopes = _scopes
         self.authorityType = _authorityType
+        self.domainHint = call.getString("domainHint")
+        self.loginHint = call.getString("loginHint")
         self.bridgeViewController = bridgeViewController
 
         do {
@@ -46,7 +50,17 @@ import MSAL
                 ? try MSALAADAuthority(url: _authorityURL) : try MSALB2CAuthority(url: _authorityURL)
 
             let msalConfiguration = MSALPublicClientApplicationConfig(clientId: _clientID, redirectUri: nil, authority: authority)
-            msalConfiguration.knownAuthorities = [authority]
+            let knownAuthorityStrings = call.getArray("knownAuthorities", String.self) ?? []
+            if knownAuthorityStrings.isEmpty {
+                msalConfiguration.knownAuthorities = [authority]
+            } else {
+                msalConfiguration.knownAuthorities = knownAuthorityStrings.compactMap { urlString in
+                    guard let url = URL(string: urlString) else { return nil }
+                    return try? (_authorityType == "AAD"
+                        ? MSALAADAuthority(url: url) as MSALAuthority
+                        : MSALB2CAuthority(url: url) as MSALAuthority)
+                }
+            }
             self.applicationContext = try MSALPublicClientApplication(configuration: msalConfiguration)
 
             call.resolve()
@@ -111,6 +125,7 @@ import MSAL
         account["idTokenClaims"] = dictionaryToJSObject(msalAccount.accountClaims ?? [:])
         account["identifier"] = msalAccount.identifier
         account["homeAccountId"] = msalAccount.homeAccountId?.identifier
+        account["tenantId"] = msalAccount.homeAccountId?.tenantId
         account["isSSOAccount"] = msalAccount.isSSOAccount
         return account
     }
@@ -166,6 +181,8 @@ import MSAL
         let parameters = MSALInteractiveTokenParameters(scopes: self.scopes, webviewParameters: webviewParameters)
 
         parameters.promptType = .selectAccount
+        parameters.domainHint = self.domainHint
+        parameters.loginHint = self.loginHint
 
         applicationContext.acquireToken(with: parameters) { (result, error) in
             if error != nil {
@@ -191,6 +208,7 @@ import MSAL
         account["identifier"] = result.account.identifier
         account["idToken"] = result.idToken
         account["homeAccountId"] = result.account.homeAccountId?.identifier
+        account["tenantId"] = result.account.homeAccountId?.tenantId
         account["isSSOAccount"] = result.account.isSSOAccount
 
         ret["accessToken"] = result.accessToken
@@ -201,6 +219,7 @@ import MSAL
         ret["idToken"] = result.idToken
         ret["authority"] = result.authority.description
         ret["uniqueId"] = result.tenantProfile.identifier
+        ret["tenantId"] = result.account.homeAccountId?.tenantId
 
         ret["account"] = account
 

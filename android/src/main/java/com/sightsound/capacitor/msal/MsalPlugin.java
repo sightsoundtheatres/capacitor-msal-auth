@@ -36,6 +36,7 @@ public class MsalPlugin extends Plugin {
     public void initializePcaInstance(final PluginCall call) throws MsalException, InterruptedException, IOException, JSONException {
         String clientId = call.getString("clientId");
         String domainHint = call.getString("domainHint");
+        String loginHint = call.getString("loginHint");
         String tenantId = call.getString("tenantId");
         String keyHash = call.getString("keyHash");
         String authorityTypeString = call.getString("authorityType", AuthorityType.AAD.name());
@@ -62,6 +63,7 @@ public class MsalPlugin extends Plugin {
             implementation.initializePcaInstance(
                 clientId,
                 domainHint,
+                loginHint,
                 tenantId,
                 authorityType,
                 authorityUrl,

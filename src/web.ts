@@ -84,9 +84,13 @@ export class MsalPluginWeb extends WebPlugin implements MsalPluginPlugin {
       throw new Error('BaseOptions not initialized');
     }
 
+    const extraQueryParameters: Record<string, string> = {
+      ...(this.baseConfig?.domainHint ? { domain_hint: this.baseConfig.domainHint } : {}),
+      ...(this.baseConfig?.loginHint ? { login_hint: this.baseConfig.loginHint } : {}),
+    };
     const result = await instance.loginPopup({
       scopes: this.baseConfig?.scopes ?? [],
-      ...(this.baseConfig?.domainHint ? { extraQueryParameters: { domain_hint: this.baseConfig.domainHint } } : {}),
+      ...(Object.keys(extraQueryParameters).length ? { extraQueryParameters } : {}),
       prompt: 'select_account',
     });
     this.notifyListeners('accountChanged', {});
@@ -102,9 +106,13 @@ export class MsalPluginWeb extends WebPlugin implements MsalPluginPlugin {
       throw new Error('BaseOptions not initialized');
     }
 
+    const extraQueryParameters: Record<string, string> = {
+      ...(this.baseConfig?.domainHint ? { domain_hint: this.baseConfig.domainHint } : {}),
+      ...(this.baseConfig?.loginHint ? { login_hint: this.baseConfig.loginHint } : {}),
+    };
     return await instance.acquireTokenSilent({
       scopes: this.baseConfig?.scopes ?? [],
-      ...(this.baseConfig?.domainHint ? { extraQueryParameters: { domain_hint: this.baseConfig.domainHint } } : {}),
+      ...(Object.keys(extraQueryParameters).length ? { extraQueryParameters } : {}),
       account,
     });
   }

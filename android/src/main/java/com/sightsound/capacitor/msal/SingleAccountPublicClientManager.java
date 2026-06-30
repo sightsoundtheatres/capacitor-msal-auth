@@ -47,6 +47,7 @@ public class SingleAccountPublicClientManager implements IPublicClientManager {
     public void initializeInstance(
         String clientId,
         String domainHint,
+        String loginHint,
         String tenantId,
         AuthorityType authorityType,
         String customAuthorityUrl,
@@ -83,6 +84,7 @@ public class SingleAccountPublicClientManager implements IPublicClientManager {
 
         configFile.put("client_id", clientId);
         configFile.put("domain_hint", domainHint);
+        configFile.put("login_hint", loginHint);
         configFile.put("authorization_user_agent", "DEFAULT");
         configFile.put("redirect_uri", redirectUri);
         configFile.put("account_mode", "SINGLE");
@@ -108,7 +110,7 @@ public class SingleAccountPublicClientManager implements IPublicClientManager {
                 JSObject accountInfo = new JSObject();
 
                 accountInfo.put("accessToken", result.getAccessToken());
-                accountInfo.put("azuthorizationHeader", result.getAuthorizationHeader());
+                accountInfo.put("authorizationHeader", result.getAuthorizationHeader());
                 accountInfo.put("authenticationScheme", result.getAuthenticationScheme());
                 accountInfo.put("tenantId", result.getTenantId());
                 accountInfo.put("expiresOn", result.getExpiresOn().toString());
@@ -120,6 +122,8 @@ public class SingleAccountPublicClientManager implements IPublicClientManager {
                 accountInfo.put("account", account);
                 accountInfo.put("idToken", resultAccount.getIdToken());
                 accountInfo.put("authority", resultAccount.getAuthority());
+                Object oid = resultAccount.getClaims() != null ? resultAccount.getClaims().get("oid") : null;
+                if (oid instanceof String) accountInfo.put("uniqueId", (String) oid);
 
                 call.resolve(accountInfo);
             } catch (Exception e) {
@@ -252,6 +256,7 @@ public class SingleAccountPublicClientManager implements IPublicClientManager {
 
         result.put("authority", account.getAuthority());
         result.put("homeAccountId", account.getId());
+        result.put("identifier", account.getId());
         result.put("idTokenClaims", new JSONObject(account.getClaims()));
         result.put("tenantId", account.getTenantId());
         result.put("username", account.getUsername());
