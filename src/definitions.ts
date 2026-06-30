@@ -42,6 +42,20 @@ export interface LoginOptions extends BaseOptions {
   scopes?: string[];
 }
 export declare type LogoutOptions = BaseOptions;
+
+/**
+ * Describes whether the device is operating in Microsoft Entra shared-device mode.
+ *
+ * Shared-device mode is only supported on iOS and Android. On the web,
+ * `isSharedDevice` is always `false` and `mode` is always `'personal'`.
+ */
+export interface DeviceInfo {
+  /** `true` when the device has been configured for shared-device mode by an administrator. */
+  isSharedDevice: boolean;
+  /** `'shared'` when running in shared-device mode, otherwise `'personal'`. */
+  mode: 'shared' | 'personal';
+}
+
 export interface MsalPluginPlugin {
   initializePcaInstance(options: BaseOptions): Promise<void>;
   login(account?: { identifier?: string }): Promise<AuthenticationResult>;
@@ -49,5 +63,11 @@ export interface MsalPluginPlugin {
   getAccounts(): Promise<{
     accounts: AccountInfo[];
   }>;
+  /**
+   * Returns the shared-device-mode state of the current device.
+   *
+   * Must be called after {@link MsalPluginPlugin.initializePcaInstance}.
+   */
+  getDeviceInfo(): Promise<DeviceInfo>;
   addListener(eventName: 'accountChanged', listenerFunc: () => void): Promise<PluginListenerHandle>;
 }

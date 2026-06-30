@@ -36,6 +36,7 @@ public class SingleAccountPublicClientManager implements IPublicClientManager {
     private final MsalPlugin plugin;
     private final AppCompatActivity activity;
     private List<String> scopes;
+    private BroadcastReceiver mAccountChangedReceiver;
 
     public SingleAccountPublicClientManager(MsalPlugin plugin) {
         this.activity = plugin.getActivity();
@@ -88,6 +89,7 @@ public class SingleAccountPublicClientManager implements IPublicClientManager {
         configFile.put("authorization_user_agent", "DEFAULT");
         configFile.put("redirect_uri", redirectUri);
         configFile.put("account_mode", "SINGLE");
+        configFile.put("shared_device_mode_supported", true);
         configFile.put("authorities", new JSONArray().put(authorityConfig));
 
         File config = writeJSONObjectConfig(configFile);
@@ -95,6 +97,7 @@ public class SingleAccountPublicClientManager implements IPublicClientManager {
         this.scopes = scopes;
 
         this.registerAccountChangeBroadcastReceiver();
+        this.registerCurrentAccountCallback();
 
         if (!config.delete()) {
             Logger.warn("Warning! Unable to delete config file.");
@@ -177,8 +180,21 @@ public class SingleAccountPublicClientManager implements IPublicClientManager {
         }
     }
 
+    @Override
     public boolean isSharedDevice() {
-        return instance.isSharedDevice();
+        return instance != null && instance.isSharedDevice();
+    }
+
+    @Override
+    public void cleanup() {
+        if (mAccountChangedReceiver != null) {
+            try {
+                this.context.unregisterReceiver(mAccountChangedReceiver);
+            } catch (IllegalArgumentException e) {
+                Logger.warn("BroadcastReceiver was already unregistered or never registered: " + e.getMessage());
+            }
+            mAccountChangedReceiver = null;
+        }
     }
 
     private File writeJSONObjectConfig(JSONObject data) throws IOException {
@@ -265,18 +281,59 @@ public class SingleAccountPublicClientManager implements IPublicClientManager {
         return result;
     }
 
+    private static final String MSAL_ACCOUNT_CHANGED_ACTION =
+        "com.microsoft.identity.client.sharedmode.CURRENT_ACCOUNT_CHANGED";
+
     private void registerAccountChangeBroadcastReceiver() {
-        this.context.registerReceiver(
-            new BroadcastReceiver() {
+        if (mAccountChangedReceiver != null) {
+            // Guard against double-registration
+            return;
+        }
+
+        mAccountChangedReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                plugin.notifyAccountChangedListener();
+                Logger.info(MsalPlugin.TAG, "Received account-change broadcast: " + intent.getAction());
+            }
+        };
+
+        // Register for both the MSAL broker account-changed action and the system
+        // LOGIN_ACCOUNTS_CHANGED action so cross-app sign-out and broker sign-out are
+        // both caught. The broker action is broadcast by the Microsoft Authenticator
+        // app (a separate UID), so the receiver must be EXPORTED for the OS to deliver
+        // it — RECEIVER_NOT_EXPORTED would silently drop the cross-app broadcast and
+        // defeat shared-device account-change notifications. minSdk is 33, so the flag
+        // is mandatory.
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(MSAL_ACCOUNT_CHANGED_ACTION);
+        filter.addAction("android.accounts.LOGIN_ACCOUNTS_CHANGED");
+
+        this.context.registerReceiver(mAccountChangedReceiver, filter, Context.RECEIVER_EXPORTED);
+    }
+
+    private void registerCurrentAccountCallback() {
+        this.instance.getCurrentAccountAsync(
+            new ISingleAccountPublicClientApplication.CurrentAccountCallback() {
                 @Override
-                public void onReceive(Context context, Intent intent) {
-                    plugin.notifyAccountChangedListener();
-                    Logger.info(MsalPlugin.TAG, "Received broadcast");
+                public void onAccountLoaded(@androidx.annotation.Nullable IAccount activeAccount) {
+                    // Initial load — nothing to notify yet
                 }
-            },
-            new IntentFilter("android.accounts.LOGIN_ACCOUNTS_CHANGED")
-            //[BUG] Removing account from settings page does not trigger the signout broadcast from broker.
-            //new IntentFilter("com.microsoft.identity.client.sharedmode.CURRENT_ACCOUNT_CHANGED")
+
+                @Override
+                public void onAccountChanged(
+                    @androidx.annotation.Nullable IAccount priorAccount,
+                    @androidx.annotation.Nullable IAccount currentAccount
+                ) {
+                    plugin.notifyAccountChangedListener();
+                    Logger.info(MsalPlugin.TAG, "MSAL account changed via CurrentAccountCallback");
+                }
+
+                @Override
+                public void onError(@NonNull MsalException exception) {
+                    Logger.error(MsalPlugin.TAG, "Error in getCurrentAccountAsync", exception);
+                }
+            }
         );
     }
 }

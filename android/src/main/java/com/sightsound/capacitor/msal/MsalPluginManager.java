@@ -1,5 +1,6 @@
 package com.sightsound.capacitor.msal;
 
+import com.getcapacitor.JSObject;
 import com.getcapacitor.PluginCall;
 import com.microsoft.identity.client.exception.MsalException;
 import java.io.IOException;
@@ -48,6 +49,11 @@ public class MsalPluginManager {
         if (singleAccountManager.isSharedDevice()) {
             this.publicClientManager = singleAccountManager;
         } else {
+            // The single-account manager was only needed to detect shared-device mode. It already
+            // registered a broadcast receiver and an account-change callback during init, so it must
+            // be cleaned up before it is discarded — otherwise its receiver leaks for the app's lifetime.
+            singleAccountManager.cleanup();
+
             MultipleAccountPublicClientManager multipleAccountManager = new MultipleAccountPublicClientManager(this.plugin);
             multipleAccountManager.initializeInstance(
                 clientId,
@@ -74,5 +80,23 @@ public class MsalPluginManager {
 
     public void logout(PluginCall call) {
         this.publicClientManager.logout(call);
+    }
+
+    public void getDeviceInfo(PluginCall call) {
+        if (this.publicClientManager == null) {
+            call.reject("PCA instance not initialized. Call initializePcaInstance first.");
+            return;
+        }
+        boolean shared = this.publicClientManager.isSharedDevice();
+        JSObject result = new JSObject();
+        result.put("isSharedDevice", shared);
+        result.put("mode", shared ? "shared" : "personal");
+        call.resolve(result);
+    }
+
+    public void cleanup() {
+        if (this.publicClientManager != null) {
+            this.publicClientManager.cleanup();
+        }
     }
 }

@@ -13,8 +13,26 @@ import MSAL
     private var redirectUri: String?
     private var bridgeViewController: UIViewController?
 
-    /// Invoked when the set of signed-in accounts changes (after an interactive login or a logout).
+    /// Guard flag so we only register the Darwin observer once per instance.
+    private var darwinObserverRegistered = false
+
+    /// Invoked when the set of signed-in accounts changes (after an interactive login, a logout,
+    /// or a cross-app account change detected via the Darwin notification).
     var onAccountChanged: (() -> Void)?
+
+    // MARK: - Lifecycle
+
+    deinit {
+        if darwinObserverRegistered {
+            // Remove every observer registered by this instance to avoid use-after-free.
+            CFNotificationCenterRemoveEveryObserver(
+                CFNotificationCenterGetDarwinNotifyCenter(),
+                Unmanaged.passUnretained(self).toOpaque()
+            )
+        }
+    }
+
+    // MARK: - Public plugin entry points
 
     @objc public func initializePcaInstance(_ call: CAPPluginCall, bridgeViewController: UIViewController) {
         guard let _clientID = call.getString("clientId") else {
@@ -63,6 +81,9 @@ import MSAL
             }
             self.applicationContext = try MSALPublicClientApplication(configuration: msalConfiguration)
 
+            // Register the Darwin notification listener for cross-app shared-device account changes.
+            registerSharedModeAccountChangedListener()
+
             call.resolve()
             return
         } catch {
@@ -81,21 +102,78 @@ import MSAL
         }
     }
 
+    /// Logs out the current user.
+    ///
+    /// On a shared device (SDM), this performs a *global* sign-out via
+    /// `MSALSignoutParameters`, which clears device-wide tokens so that all
+    /// eligible apps see the account as signed out.  On a personal device it
+    /// falls back to removing each account locally (original behaviour).
     @objc public func logout(_ call: CAPPluginCall) {
         guard let applicationContext = self.applicationContext else {
             call.reject("PublicClientApplication not initialized")
             return
         }
 
-        do {
-            let accounts = try applicationContext.allAccounts()
-            for account in accounts {
-                try applicationContext.remove(account)
+        guard let bridgeViewController = self.bridgeViewController else {
+            call.reject("bridgeViewController not initialized")
+            return
+        }
+
+        // Determine whether we are on a shared device, then branch accordingly.
+        // Do NOT guess on failure: silently treating an error/nil as a personal device would
+        // perform a local-only sign-out on a shared device, leaving device-wide tokens active
+        // for other apps. Reject instead so the caller can retry.
+        let deviceInfoParams = MSALParameters()
+        deviceInfoParams.completionBlockQueue = DispatchQueue.main
+
+        applicationContext.getDeviceInformation(with: deviceInfoParams) { [weak self] deviceInformation, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                call.reject("Failed to determine device mode for logout: \(error.localizedDescription)")
+                return
             }
-            self.onAccountChanged?()
-            call.resolve()
-        } catch {
-            call.reject("Failed to logout: \(error.localizedDescription)")
+
+            guard let deviceInformation = deviceInformation else {
+                call.reject("Could not determine device mode for logout")
+                return
+            }
+
+            if deviceInformation.deviceMode == .shared {
+                self.globalSignOut(applicationContext: applicationContext,
+                                   bridgeViewController: bridgeViewController,
+                                   call: call)
+            } else {
+                self.localSignOut(applicationContext: applicationContext, call: call)
+            }
+        }
+    }
+
+    /// Returns device-mode information.
+    ///
+    /// Resolves `{ isSharedDevice: Bool, mode: "shared" | "personal" }`.
+    @objc public func getDeviceInfo(_ call: CAPPluginCall) {
+        guard let applicationContext = self.applicationContext else {
+            call.reject("PublicClientApplication not initialized")
+            return
+        }
+
+        applicationContext.getDeviceInformation(with: nil) { deviceInformation, error in
+            if let error = error {
+                call.reject("Failed to get device information: \(error.localizedDescription)")
+                return
+            }
+
+            guard let deviceInfo = deviceInformation else {
+                call.reject("No device information returned")
+                return
+            }
+
+            let isShared = deviceInfo.deviceMode == .shared
+            var result = JSObject()
+            result["isSharedDevice"] = isShared
+            result["mode"] = isShared ? "shared" : "personal"
+            call.resolve(result)
         }
     }
 
@@ -128,6 +206,114 @@ import MSAL
         account["tenantId"] = msalAccount.homeAccountId?.tenantId
         account["isSSOAccount"] = msalAccount.isSSOAccount
         return account
+    }
+
+    // MARK: - Darwin notification (Shared Device Mode cross-app account changes)
+
+    /// Registers a Darwin notification observer for `SHARED_MODE_CURRENT_ACCOUNT_CHANGED`.
+    ///
+    /// The C-level callback cannot capture `self` via a closure, so we pass a raw unretained
+    /// pointer to `self` as the `observer` argument and recover it inside the callback using
+    /// `Unmanaged<MsalPlugin>.fromOpaque(_:).takeUnretainedValue()`.  The observer is
+    /// deregistered in `deinit` via `CFNotificationCenterRemoveEveryObserver` to prevent
+    /// use-after-free.
+    ///
+    /// - Note: **App Store caveat** — Apple may reject an app whose *only* background mode is
+    ///   listening for Darwin notifications.  The consuming app must already declare a legitimate
+    ///   UIBackgroundModes entry (e.g. `remote-notification`, `fetch`, `processing`).  This is an
+    ///   app-level requirement; the plugin itself does not add background modes.
+    private func registerSharedModeAccountChangedListener() {
+        guard !darwinObserverRegistered else { return }
+
+        let center = CFNotificationCenterGetDarwinNotifyCenter()
+        let notificationName = "SHARED_MODE_CURRENT_ACCOUNT_CHANGED" as CFString
+        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
+
+        let callback: CFNotificationCallback = { _, observer, _, _, _ in
+            guard let observer = observer else { return }
+            let plugin = Unmanaged<MsalPlugin>.fromOpaque(observer).takeUnretainedValue()
+            // Fire on the main queue so downstream UI work is safe.
+            DispatchQueue.main.async {
+                plugin.onAccountChanged?()
+            }
+        }
+
+        CFNotificationCenterAddObserver(
+            center,
+            selfPtr,
+            callback,
+            notificationName,
+            nil,
+            .deliverImmediately
+        )
+
+        darwinObserverRegistered = true
+    }
+
+    // MARK: - Private helpers
+
+    /// Performs a device-global sign-out via `MSALSignoutParameters`.
+    ///
+    /// Uses `getCurrentAccount` first so we sign out the correct account even if
+    /// multiple accounts exist in the cache.  Falls back to `allAccounts().first`
+    /// for cases where the SDM account state is unavailable.
+    private func globalSignOut(
+        applicationContext: MSALPublicClientApplication,
+        bridgeViewController: UIViewController,
+        call: CAPPluginCall
+    ) {
+        let msalParams = MSALParameters()
+        msalParams.completionBlockQueue = DispatchQueue.main
+
+        applicationContext.getCurrentAccount(with: msalParams) { [weak self] currentAccount, _, error in
+            guard let self = self else { return }
+
+            // Resolve the account to sign out from.
+            let accountToSignOut: MSALAccount?
+            if let current = currentAccount {
+                accountToSignOut = current
+            } else {
+                accountToSignOut = try? applicationContext.allAccounts().first
+            }
+
+            guard let account = accountToSignOut else {
+                // No account signed in — nothing to do.
+                self.onAccountChanged?()
+                call.resolve()
+                return
+            }
+
+            let webviewParameters = MSALWebviewParameters(authPresentationViewController: bridgeViewController)
+            let signoutParameters = MSALSignoutParameters(webviewParameters: webviewParameters)
+            // Setting signoutFromBrowser clears the Safari session as well.
+            // The SSO plug-in only clears app-level state, not the browser session.
+            signoutParameters.signoutFromBrowser = true
+
+            applicationContext.signout(with: account, signoutParameters: signoutParameters) { [weak self] success, error in
+                guard let self = self else { return }
+                if let error = error {
+                    call.reject("Global sign-out failed: \(error.localizedDescription)")
+                    return
+                }
+                self.onAccountChanged?()
+                call.resolve()
+            }
+        }
+    }
+
+    /// Performs a local (per-app) sign-out by removing every cached account.
+    /// Used on personal (non-shared) devices.
+    private func localSignOut(applicationContext: MSALPublicClientApplication, call: CAPPluginCall) {
+        do {
+            let accounts = try applicationContext.allAccounts()
+            for account in accounts {
+                try applicationContext.remove(account)
+            }
+            self.onAccountChanged?()
+            call.resolve()
+        } catch {
+            call.reject("Failed to logout: \(error.localizedDescription)")
+        }
     }
 
     @objc private func acquireTokenSilently(identifier: String, call: CAPPluginCall) {

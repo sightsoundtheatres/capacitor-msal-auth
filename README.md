@@ -1,6 +1,6 @@
 # capacitor-msal-auth
 
-This Capacitor plugin provides seamless integration with the Microsoft Authentication Library (MSAL), enabling secure multi-account login support for both web and mobile platforms. It also includes an intelligent feature that auto-detects if the device is a shared device and switches to a single-login mode accordingly. Easily manage authentication flows with Microsoft Azure AD and support multiple accounts within your app.
+This Capacitor plugin provides seamless integration with the Microsoft Authentication Library (MSAL), enabling secure multi-account login support for both web and mobile platforms. On iOS and Android it also supports Microsoft Entra [shared device mode](https://learn.microsoft.com/en-us/entra/identity-platform/shared-device-mode): it auto-detects an enrolled shared device, switches to single-account mode, and makes sign-in/sign-out global across the device for frontline-worker scenarios. Easily manage authentication flows with Microsoft Azure AD and support multiple accounts within your app.
 
 ## Development
 - **Capacitor Plugin Development Workflow**: https://capacitorjs.com/docs/plugins/workflow
@@ -133,7 +133,8 @@ func application(_ app: UIApplication, open url: URL, options: [UIApplication.Op
 ```
 
 ## Usage
-Usage of the plugin is fairly simple, as it has methods: `login`, `logout`, and `getAccounts`.
+Usage of the plugin is fairly simple, as it has methods: `login`, `logout`, `getAccounts`, and
+`getDeviceInfo`, plus an `accountChanged` event listener.
 
 ### Login
 ```typescript
@@ -172,6 +173,44 @@ const idToken = result.account.idToken;
 await MsAuthPlugin.logout();
 ```
 
+### Shared device mode (iOS & Android)
+
+[Shared device mode](https://learn.microsoft.com/en-us/entra/identity-platform/shared-device-mode)
+lets an administrator enroll a device so frontline workers can sign in, use the app, and sign out
+device-wide with a single action. The plugin **auto-detects** shared mode at
+`initializePcaInstance` time and adapts:
+
+- On a **shared device**, the plugin runs in single-account mode; `login` and `logout` are
+  **global** — they sign the user in/out across every MSAL-integrated app on the device.
+- On a **personal device**, behavior is unchanged (multiple accounts, app-local logout).
+- The **web** platform does not support shared device mode.
+
+Query the current mode to adjust your UX (e.g. hide "sign up" or add data-protection on shared
+devices):
+
+```typescript
+const { isSharedDevice, mode } = await MsalPlugin.getDeviceInfo();
+// mode is 'shared' | 'personal'
+```
+
+Because another app (or another worker) can change the signed-in user on a shared device, listen
+for `accountChanged` and clear any cached user data when it fires:
+
+```typescript
+const handle = await MsalPlugin.addListener('accountChanged', async () => {
+  // The signed-in user changed (or signed out) — re-check and clear stale data.
+  clearAppUserData();
+  const { accounts } = await MsalPlugin.getAccounts();
+  // ...refresh UI for the new account (or signed-out state)
+});
+
+// later: handle.remove();
+```
+
+Shared device mode requires additional Azure/device setup (Microsoft Authenticator broker,
+admin enrollment, broker-compatible redirect URIs). See the **Shared device mode** section in
+[`ONBOARDING.md`](./ONBOARDING.md).
+
 ## API
 
 <docgen-index>
@@ -180,6 +219,7 @@ await MsAuthPlugin.logout();
 * [`login(...)`](#login)
 * [`logout()`](#logout)
 * [`getAccounts()`](#getaccounts)
+* [`getDeviceInfo()`](#getdeviceinfo)
 * [`addListener('accountChanged', ...)`](#addlisteneraccountchanged-)
 * [Interfaces](#interfaces)
 * [Type Aliases](#type-aliases)
@@ -237,6 +277,21 @@ getAccounts() => Promise<{ accounts: AccountInfo[]; }>
 --------------------
 
 
+### getDeviceInfo()
+
+```typescript
+getDeviceInfo() => Promise<DeviceInfo>
+```
+
+Returns the shared-device-mode state of the current device.
+
+Must be called after {@link MsalPluginPlugin.initializePcaInstance}.
+
+**Returns:** <code>Promise&lt;<a href="#deviceinfo">DeviceInfo</a>&gt;</code>
+
+--------------------
+
+
 ### addListener('accountChanged', ...)
 
 ```typescript
@@ -261,8 +316,9 @@ addListener(eventName: 'accountChanged', listenerFunc: () => void) => Promise<Pl
 | Prop                              | Type                        |
 | --------------------------------- | --------------------------- |
 | **`clientId`**                    | <code>string</code>         |
-| **`tenantId`**                      | <code>string</code>         |
+| **`tenantId`**                    | <code>string</code>         |
 | **`domainHint`**                  | <code>string</code>         |
+| **`loginHint`**                   | <code>string</code>         |
 | **`authorityType`**               | <code>'AAD' \| 'B2C'</code> |
 | **`authorityUrl`**                | <code>string</code>         |
 | **`knownAuthorities`**            | <code>string[]</code>       |
@@ -417,6 +473,19 @@ Enables basic storage and retrieval of dates and times.
 | **toJSON**             | (key?: any) =&gt; string                                                                                     | Used by the JSON.stringify method to enable the transformation of an object's data for JavaScript Object Notation (JSON) serialization. |
 
 
+#### DeviceInfo
+
+Describes whether the device is operating in Microsoft Entra shared-device mode.
+
+Shared-device mode is only supported on iOS and Android. On the web,
+`isSharedDevice` is always `false` and `mode` is always `'personal'`.
+
+| Prop                 | Type                                | Description                                                                            |
+| -------------------- | ----------------------------------- | -------------------------------------------------------------------------------------- |
+| **`isSharedDevice`** | <code>boolean</code>                | `true` when the device has been configured for shared-device mode by an administrator. |
+| **`mode`**           | <code>'shared' \| 'personal'</code> | `'shared'` when running in shared-device mode, otherwise `'personal'`.                 |
+
+
 #### PluginListenerHandle
 
 | Prop         | Type                                      |
@@ -443,130 +512,28 @@ Account object with the following signature:
 - tenantProfiles         - <a href="#map">Map</a> of tenant profile objects for each tenant that the account has authenticated with in the browser
 - dataBoundary           - Data boundary extracted from clientInfo
 
-<code>{
- homeAccountId: string;
- environment: string;
- tenantId: string;
- username: string;
- localAccountId: string;
- loginHint?: string;
- name?: string;
- upn?: string;
- idToken?: string;
- idTokenClaims?: <a href="#tokenclaims">TokenClaims</a> & {
- [key: string]: string | number | string[] | object | unknown;
- };
- nativeAccountId?: string;
- authorityType?: string;
- tenantProfiles?: <a href="#map">Map</a>&lt;string, <a href="#tenantprofile">TenantProfile</a>&gt;;
- dataBoundary?: <a href="#databoundary">DataBoundary</a>;
- /**
- * Indicates whether the user selected "Keep Me Signed In" (KMSI) during authentication.
- * Derived from the signin_state claim in the ID token.
- */
- kmsi?: boolean;
- }</code>
+<code>{ homeAccountId: string; environment: string; tenantId: string; username: string; localAccountId: string; loginHint?: string; name?: string; upn?: string; idToken?: string; idTokenClaims?: <a href="#tokenclaims">TokenClaims</a> & { [key: string]: string | number | string[] | object | unknown; }; nativeAccountId?: string; authorityType?: string; tenantProfiles?: <a href="#map">Map</a>&lt;string, <a href="#tenantprofile">TenantProfile</a>&gt;; dataBoundary?: <a href="#databoundary">DataBoundary</a>; /** * Indicates whether the user selected "Keep Me Signed In" (KMSI) during authentication. * Derived from the signin_state claim in the ID token. */ kmsi?: boolean; }</code>
 
 
 #### TokenClaims
 
 Type which describes Id Token claims known by MSAL.
 
-<code>{
- /**
- * Audience
- */
- aud?: string;
- /**
- * Issuer
- */
- iss?: string;
- /**
- * Issued at
- */
- iat?: number;
- /**
- * Not valid before
- */
- nbf?: number;
- /**
- * Immutable object identifier, this ID uniquely identifies the user across applications
- */
- oid?: string;
- /**
- * Immutable subject identifier, this is a pairwise identifier - it is unique to a particular application ID
- */
- sub?: string;
- /**
- * Users' tenant or '9188040d-6c67-4c5b-b112-36a304b66dad' for personal accounts.
- */
- tid?: string;
- /**
- * Trusted Framework Policy (B2C) The name of the policy that was used to acquire the ID token.
- */
- tfp?: string;
- /**
- * Authentication Context Class Reference (B2C) Used only with older policies.
- */
- acr?: string;
- ver?: string;
- upn?: string;
- preferred_username?: string;
- login_hint?: string;
- /**
- * Contains KMSI (Keep Me Signed In) status among other things
- */
- signin_state?: <a href="#array">Array</a>&lt;string&gt;;
- emails?: string[];
- name?: string;
- nonce?: string;
- /**
- * Expiration
- */
- exp?: number;
- home_oid?: string;
- sid?: string;
- cloud_instance_host_name?: string;
- cnf?: {
- kid: string;
- };
- x5c_ca?: string[];
- ts?: number;
- at?: string;
- u?: string;
- p?: string;
- m?: string;
- roles?: string[];
- amr?: string[];
- idp?: string;
- auth_time?: number;
- /**
- * 	Region of the resource tenant
- */
- tenant_region_scope?: string;
- tenant_region_sub_scope?: string;
- }</code>
+<code>{ /** * Audience */ aud?: string; /** * Issuer */ iss?: string; /** * Issued at */ iat?: number; /** * Not valid before */ nbf?: number; /** * Immutable object identifier, this ID uniquely identifies the user across applications */ oid?: string; /** * Immutable subject identifier, this is a pairwise identifier - it is unique to a particular application ID */ sub?: string; /** * Users' tenant or '9188040d-6c67-4c5b-b112-36a304b66dad' for personal accounts. */ tid?: string; /** * Trusted Framework Policy (B2C) The name of the policy that was used to acquire the ID token. */ tfp?: string; /** * Authentication Context Class Reference (B2C) Used only with older policies. */ acr?: string; ver?: string; upn?: string; preferred_username?: string; login_hint?: string; /** * Contains KMSI (Keep Me Signed In) status among other things */ signin_state?: <a href="#array">Array</a>&lt;string&gt;; emails?: string[]; name?: string; nonce?: string; /** * Expiration */ exp?: number; home_oid?: string; sid?: string; cloud_instance_host_name?: string; cnf?: { kid: string; }; x5c_ca?: string[]; ts?: number; at?: string; u?: string; p?: string; m?: string; roles?: string[]; amr?: string[]; idp?: string; auth_time?: number; /** * 	Region of the resource tenant */ tenant_region_scope?: string; tenant_region_sub_scope?: string; }</code>
 
 
 #### TenantProfile
 
 Account details that vary across tenants for the same user
 
-<code><a href="#pick">Pick</a>&lt;<a href="#accountinfo">AccountInfo</a>, "tenantId" | "localAccountId" | "name" | "username" | "loginHint" | "upn" | "nativeAccountId"&gt; & {
- /**
- * - isHomeTenant - True if this is the home tenant profile of the account, false if it's a guest tenant profile
- */
- isHomeTenant?: boolean;
- }</code>
+<code><a href="#pick">Pick</a>&lt;<a href="#accountinfo">AccountInfo</a>, "tenantId" | "localAccountId" | "name" | "username" | "loginHint" | "upn" | "nativeAccountId"&gt; & { /** * - isHomeTenant - True if this is the home tenant profile of the account, false if it's a guest tenant profile */ isHomeTenant?: boolean; }</code>
 
 
 #### Pick
 
 From T, pick a set of properties whose keys are in the union K
 
-<code>{
- [P in K]: T[P];
- }</code>
+<code>{ [P in K]: T[P]; }</code>
 
 
 #### DataBoundary
@@ -592,29 +559,6 @@ Result returned from the authority's token endpoint.
 - familyId               - Family ID identifier, usually only used for refresh tokens
 - requestId              - Request ID returned as part of the response
 
-<code>{
- authority: string;
- uniqueId: string;
- tenantId: string;
- scopes: <a href="#array">Array</a>&lt;string&gt;;
- account: <a href="#accountinfo">AccountInfo</a> | null;
- idToken: string;
- idTokenClaims: object;
- accessToken: string;
- fromCache: boolean;
- expiresOn: <a href="#date">Date</a> | null;
- extExpiresOn?: <a href="#date">Date</a>;
- refreshOn?: <a href="#date">Date</a>;
- tokenType: string;
- correlationId: string;
- requestId?: string;
- state?: string;
- familyId?: string;
- cloudGraphHostName?: string;
- msGraphHost?: string;
- code?: string;
- fromPlatformBroker?: boolean;
- resource?: string;
- }</code>
+<code>{ authority: string; uniqueId: string; tenantId: string; scopes: <a href="#array">Array</a>&lt;string&gt;; account: <a href="#accountinfo">AccountInfo</a> | null; idToken: string; idTokenClaims: object; accessToken: string; fromCache: boolean; expiresOn: <a href="#date">Date</a> | null; extExpiresOn?: <a href="#date">Date</a>; refreshOn?: <a href="#date">Date</a>; tokenType: string; correlationId: string; requestId?: string; state?: string; familyId?: string; cloudGraphHostName?: string; msGraphHost?: string; code?: string; fromPlatformBroker?: boolean; resource?: string; }</code>
 
 </docgen-api>

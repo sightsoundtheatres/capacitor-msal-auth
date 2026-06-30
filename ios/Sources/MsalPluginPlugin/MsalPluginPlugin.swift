@@ -13,7 +13,8 @@ public class MsalPluginPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "initializePcaInstance", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "login", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "logout", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "getAccounts", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "getAccounts", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getDeviceInfo", returnType: CAPPluginReturnPromise)
     ]
     private let implementation = MsalPlugin()
 
@@ -42,5 +43,9 @@ public class MsalPluginPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func getAccounts(_ call: CAPPluginCall) {
         implementation.getAccounts(call: call)
+    }
+
+    @objc func getDeviceInfo(_ call: CAPPluginCall) {
+        implementation.getDeviceInfo(call)
     }
 }

@@ -101,6 +101,19 @@ public class MsalPlugin extends Plugin {
         implementation.getAccounts(call);
     }
 
+    @PluginMethod
+    public void getDeviceInfo(final PluginCall call) {
+        implementation.getDeviceInfo(call);
+    }
+
+    @Override
+    protected void handleOnDestroy() {
+        if (implementation != null) {
+            implementation.cleanup();
+        }
+        super.handleOnDestroy();
+    }
+
     public void notifyAccountChangedListener() {
         notifyListeners(MSAL_ACCOUNT_CHANGED_EVENT, new JSObject());
     }

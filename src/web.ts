@@ -2,7 +2,7 @@ import type { AccountInfo, AuthenticationResult, IPublicClientApplication } from
 import { PublicClientApplication } from '@azure/msal-browser';
 import { WebPlugin } from '@capacitor/core';
 
-import type { BaseOptions, MsalPluginPlugin } from './definitions';
+import type { BaseOptions, DeviceInfo, MsalPluginPlugin } from './definitions';
 
 let instance: IPublicClientApplication | undefined;
 export class MsalPluginWeb extends WebPlugin implements MsalPluginPlugin {
@@ -73,6 +73,11 @@ export class MsalPluginWeb extends WebPlugin implements MsalPluginPlugin {
     }
 
     return { accounts: instance.getAllAccounts() };
+  }
+
+  // Shared-device mode is not supported on the web. Always report a personal device.
+  public async getDeviceInfo(): Promise<DeviceInfo> {
+    return { isSharedDevice: false, mode: 'personal' };
   }
 
   private async acquireTokenInteractively(): Promise<AuthenticationResult> {

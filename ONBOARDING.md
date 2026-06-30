@@ -169,7 +169,50 @@ await MsalPlugin.logout();
 
 See the README API section for the full options and result types.
 
-## 6. Verify
+## 6. (Optional) Shared device mode
+
+[Shared device mode](https://learn.microsoft.com/en-us/entra/identity-platform/shared-device-mode)
+(SDM) lets an admin enroll an **iOS or Android** device for frontline workers: sign-in and sign-out
+become **device-wide** across all MSAL apps. The plugin auto-detects SDM at
+`initializePcaInstance` time — you don't toggle it in code — but the device and Azure registration
+must be set up for it. **The web platform does not support SDM.**
+
+**a. Azure registration must use a broker-compatible redirect URI.**
+
+- **Android:** add a redirect URI of the form `msauth://<package name>/<url-encoded key hash>`
+  (this is the same redirect the plugin already builds from `keyHash`), and pass
+  `brokerRedirectUriRegistered: true` to `initializePcaInstance`.
+- **iOS:** add a redirect URI of the form `msauth.<bundle id>://auth` and keep the
+  `com.microsoft.adalcache` keychain group from step 4a.
+
+**b. The device needs the Microsoft broker + admin enrollment.**
+
+- Install **Microsoft Authenticator** (Android) or the **Microsoft Enterprise SSO plug-in** /
+  Authenticator (iOS) on the device.
+- A **Cloud Device Administrator** must enroll the device into shared mode in Microsoft Entra.
+  SDM is never detected on a device that hasn't been enrolled by an admin — `getDeviceInfo()` will
+  report `mode: 'personal'` until then.
+
+**c. (iOS only) background account-change notifications.** The plugin listens for cross-app
+sign-out via a Darwin notification. To receive it while backgrounded, the app must already declare a
+legitimate `UIBackgroundModes` entry in `Info.plist`. Do **not** add a background mode solely for
+this — Apple may reject the app.
+
+**d. App code.** Branch your UX on the device mode and react to user switches:
+
+```typescript
+const { isSharedDevice, mode } = await MsalPlugin.getDeviceInfo();
+
+await MsalPlugin.addListener('accountChanged', async () => {
+  // On a shared device the signed-in worker may have changed (or signed out).
+  // Clear any cached user data, then re-read the current account.
+  const { accounts } = await MsalPlugin.getAccounts();
+});
+```
+
+On a shared device, `logout()` signs the user out of the whole device, not just your app.
+
+## 7. Verify
 
 - **Web:** `npm run build` (or your app's build) and exercise login in a browser.
 - **iOS:** run on a simulator/device; confirm the Microsoft sign-in sheet appears and returns a token.

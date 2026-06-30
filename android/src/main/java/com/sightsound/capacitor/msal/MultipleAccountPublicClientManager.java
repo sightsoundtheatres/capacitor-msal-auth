@@ -37,10 +37,12 @@ public class MultipleAccountPublicClientManager implements IPublicClientManager 
     private List<String> scopes;
 
     private MsalPlugin plugin;
+    private BroadcastReceiver mAccountChangedReceiver;
 
     public MultipleAccountPublicClientManager(MsalPlugin plugin) {
         this.activity = plugin.getActivity();
         this.context = this.activity.getApplicationContext();
+        this.plugin = plugin;
     }
 
     @Override
@@ -188,6 +190,23 @@ public class MultipleAccountPublicClientManager implements IPublicClientManager 
         );
     }
 
+    @Override
+    public boolean isSharedDevice() {
+        return false;
+    }
+
+    @Override
+    public void cleanup() {
+        if (mAccountChangedReceiver != null) {
+            try {
+                this.context.unregisterReceiver(mAccountChangedReceiver);
+            } catch (IllegalArgumentException e) {
+                // Receiver was already unregistered — ignore.
+            }
+            mAccountChangedReceiver = null;
+        }
+    }
+
     private File writeJSONObjectConfig(JSONObject data) throws IOException {
         File config = new File(this.context.getFilesDir() + "auth_multiple_config.json");
 
@@ -268,17 +287,22 @@ public class MultipleAccountPublicClientManager implements IPublicClientManager 
     }
 
     private void registerAccountChangeBroadcastReceiver() {
-        this.context.registerReceiver(
-            new BroadcastReceiver() {
-                @Override
-                public void onReceive(Context context, Intent intent) {
-                    plugin.notifyAccountChangedListener();
-                    Logger.info(MsalPlugin.TAG, "Received broadcast");
-                }
-            },
-            new IntentFilter("android.accounts.LOGIN_ACCOUNTS_CHANGED")
-            //[BUG] Removing account from settings page does not trigger the signout broadcast from broker.
-            //new IntentFilter("com.microsoft.identity.client.sharedmode.CURRENT_ACCOUNT_CHANGED")
-        );
+        if (mAccountChangedReceiver != null) {
+            // Guard against double-registration
+            return;
+        }
+
+        mAccountChangedReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                plugin.notifyAccountChangedListener();
+                Logger.info(MsalPlugin.TAG, "Received broadcast");
+            }
+        };
+
+        // Only the protected system action is used here (personal/multiple-account mode),
+        // which is exempt from the API 33+ exported-flag requirement, so the two-argument
+        // overload is safe. The receiver is stored so it can be unregistered in cleanup().
+        this.context.registerReceiver(mAccountChangedReceiver, new IntentFilter("android.accounts.LOGIN_ACCOUNTS_CHANGED"));
     }
 }

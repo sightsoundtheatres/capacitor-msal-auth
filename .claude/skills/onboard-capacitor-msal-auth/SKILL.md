@@ -130,8 +130,25 @@ const result = await MsalPlugin.login();
 
 Omit `keyHash` if the app has no Android platform.
 
-Methods available: `initializePcaInstance`, `login(account?)`, `logout`, `getAccounts`, and an
-`accountChanged` listener.
+Methods available: `initializePcaInstance`, `login(account?)`, `logout`, `getAccounts`,
+`getDeviceInfo()`, and an `accountChanged` listener.
+
+### Shared device mode (iOS & Android only)
+
+The plugin auto-detects Microsoft Entra shared device mode at `initializePcaInstance` time — there
+is no flag to set in code. On an enrolled shared device it runs single-account, and `login`/`logout`
+become device-wide. Only bring this up if the user asks about shared/frontline devices; it requires
+extra setup beyond the steps above:
+
+- Azure registration needs a broker-compatible redirect URI (`msauth://<pkg>/<key hash>` on Android
+  with `brokerRedirectUriRegistered: true`; `msauth.<bundle id>://auth` on iOS).
+- The device needs Microsoft Authenticator / the Enterprise SSO plug-in installed and must be
+  enrolled into shared mode by a Cloud Device Administrator — otherwise `getDeviceInfo()` reports
+  `mode: 'personal'`.
+- Apps should call `getDeviceInfo()` to adapt UX and handle the `accountChanged` event to clear
+  cached user data when the signed-in worker changes. The **web** platform does not support SDM.
+
+See the **Shared device mode** section in the plugin's `ONBOARDING.md` for the full setup.
 
 ## 7. Verify and report
 

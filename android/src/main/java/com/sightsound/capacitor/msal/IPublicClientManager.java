@@ -24,4 +24,8 @@ public interface IPublicClientManager {
     void getAccounts(PluginCall call);
 
     void logout(PluginCall call);
+
+    boolean isSharedDevice();
+
+    void cleanup();
 }
