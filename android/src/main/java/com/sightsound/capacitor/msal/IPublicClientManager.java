@@ -9,8 +9,6 @@ import org.json.JSONException;
 public interface IPublicClientManager {
     void initializeInstance(
         String clientId,
-        String domainHint,
-        String loginHint,
         String tenantId,
         AuthorityType authorityType,
         String customAuthorityUrl,
@@ -19,7 +17,7 @@ public interface IPublicClientManager {
         List<String> scopes
     ) throws MsalException, InterruptedException, IOException, JSONException;
 
-    void login(String identifier, PluginCall call) throws MsalException, InterruptedException;
+    void login(String identifier, String loginHint, String domainHint, PluginCall call) throws MsalException, InterruptedException;
 
     void getAccounts(PluginCall call);
 

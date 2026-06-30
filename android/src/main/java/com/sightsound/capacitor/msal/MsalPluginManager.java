@@ -19,8 +19,6 @@ public class MsalPluginManager {
 
     public void initializePcaInstance(
         String clientId,
-        String domainHint,
-        String loginHint,
         String tenantId,
         AuthorityType authorityType,
         String customAuthorityUrl,
@@ -36,8 +34,6 @@ public class MsalPluginManager {
         SingleAccountPublicClientManager singleAccountManager = new SingleAccountPublicClientManager(this.plugin);
         singleAccountManager.initializeInstance(
             clientId,
-            domainHint,
-            loginHint,
             tenantId,
             authorityType,
             customAuthorityUrl,
@@ -57,8 +53,6 @@ public class MsalPluginManager {
             MultipleAccountPublicClientManager multipleAccountManager = new MultipleAccountPublicClientManager(this.plugin);
             multipleAccountManager.initializeInstance(
                 clientId,
-                domainHint,
-                loginHint,
                 tenantId,
                 authorityType,
                 customAuthorityUrl,
@@ -70,8 +64,8 @@ public class MsalPluginManager {
         }
     }
 
-    public void login(String identifier, PluginCall call) throws MsalException, InterruptedException {
-        this.publicClientManager.login(identifier, call);
+    public void login(String identifier, String loginHint, String domainHint, PluginCall call) throws MsalException, InterruptedException {
+        this.publicClientManager.login(identifier, loginHint, domainHint, call);
     }
 
     public void getAccounts(PluginCall call) {

@@ -23,8 +23,11 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -47,8 +50,6 @@ public class SingleAccountPublicClientManager implements IPublicClientManager {
     @Override
     public void initializeInstance(
         String clientId,
-        String domainHint,
-        String loginHint,
         String tenantId,
         AuthorityType authorityType,
         String customAuthorityUrl,
@@ -84,8 +85,6 @@ public class SingleAccountPublicClientManager implements IPublicClientManager {
         }
 
         configFile.put("client_id", clientId);
-        configFile.put("domain_hint", domainHint);
-        configFile.put("login_hint", loginHint);
         configFile.put("authorization_user_agent", "DEFAULT");
         configFile.put("redirect_uri", redirectUri);
         configFile.put("account_mode", "SINGLE");
@@ -107,8 +106,8 @@ public class SingleAccountPublicClientManager implements IPublicClientManager {
     }
 
     @Override
-    public void login(String identifier, PluginCall call) throws MsalException, InterruptedException {
-        acquireToken(identifier, (result) -> {
+    public void login(String identifier, String loginHint, String domainHint, PluginCall call) throws MsalException, InterruptedException {
+        acquireToken(identifier, loginHint, domainHint, (result) -> {
             try {
                 JSObject accountInfo = new JSObject();
 
@@ -208,15 +207,16 @@ public class SingleAccountPublicClientManager implements IPublicClientManager {
         return config;
     }
 
-    private void acquireToken(String identifier, final TokenResultCallback callback) throws MsalException, InterruptedException {
+    private void acquireToken(String identifier, String loginHint, String domainHint, final TokenResultCallback callback)
+        throws MsalException, InterruptedException {
         if (identifier != null) {
             try {
                 acquireTokenSilently(identifier, callback);
             } catch (MsalException | InterruptedException e) {
-                acquireTokenInteractively(callback);
+                acquireTokenInteractively(loginHint, domainHint, callback);
             }
         } else {
-            acquireTokenInteractively(callback);
+            acquireTokenInteractively(loginHint, domainHint, callback);
         }
     }
 
@@ -238,7 +238,7 @@ public class SingleAccountPublicClientManager implements IPublicClientManager {
         }
     }
 
-    private void acquireTokenInteractively(final TokenResultCallback callback) {
+    private void acquireTokenInteractively(String loginHint, String domainHint, final TokenResultCallback callback) {
         AcquireTokenParameters.Builder params = new AcquireTokenParameters.Builder()
             .startAuthorizationFromActivity(this.activity)
             .withScopes(this.scopes)
@@ -263,6 +263,16 @@ public class SingleAccountPublicClientManager implements IPublicClientManager {
                     }
                 }
             );
+
+        if (loginHint != null && !loginHint.isEmpty()) {
+            params = params.withLoginHint(loginHint);
+        }
+
+        if (domainHint != null && !domainHint.isEmpty()) {
+            List<Map.Entry<String, String>> extraParams = new ArrayList<>();
+            extraParams.add(new AbstractMap.SimpleEntry<>("domain_hint", domainHint));
+            params = params.withAuthorizationQueryStringParameters(extraParams);
+        }
 
         this.instance.acquireToken(params.build());
     }

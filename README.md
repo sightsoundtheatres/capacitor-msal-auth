@@ -144,12 +144,15 @@ import { MsalPlugin } from "capacitor-msal-auth";
 await MsalPlugin.initializePcaInstance({
     clientId: '<client id>',
     tenantId: '<tenant id, defaults to common>',
-    domainHint: '<domainHint>',
     scopes: ['<scopes, defaults to no scopes>'],
     keyHash: '<Android only, the key hash as obtained above>',
 });
 
-const result = await MsalPlugin.login();
+// loginHint / domainHint are optional and supplied per sign-in (not at initialization).
+const result = await MsalPlugin.login({
+    loginHint: '<optional, pre-fills the username>',
+    domainHint: '<optional, restricts sign-in to a domain>',
+});
 
 const accessToken = result.accessToken;
 const idToken = result.account.idToken;
@@ -245,12 +248,12 @@ initializePcaInstance(options: BaseOptions) => Promise<void>
 ### login(...)
 
 ```typescript
-login(account?: { identifier?: string | undefined; } | undefined) => Promise<AuthenticationResult>
+login(options?: LoginOptions | undefined) => Promise<AuthenticationResult>
 ```
 
-| Param         | Type                                  |
-| ------------- | ------------------------------------- |
-| **`account`** | <code>{ identifier?: string; }</code> |
+| Param         | Type                                                  |
+| ------------- | ----------------------------------------------------- |
+| **`options`** | <code><a href="#loginoptions">LoginOptions</a></code> |
 
 **Returns:** <code>Promise&lt;<a href="#authenticationresult">AuthenticationResult</a>&gt;</code>
 
@@ -317,8 +320,6 @@ addListener(eventName: 'accountChanged', listenerFunc: () => void) => Promise<Pl
 | --------------------------------- | --------------------------- |
 | **`clientId`**                    | <code>string</code>         |
 | **`tenantId`**                    | <code>string</code>         |
-| **`domainHint`**                  | <code>string</code>         |
-| **`loginHint`**                   | <code>string</code>         |
 | **`authorityType`**               | <code>'AAD' \| 'B2C'</code> |
 | **`authorityUrl`**                | <code>string</code>         |
 | **`knownAuthorities`**            | <code>string[]</code>       |
@@ -471,6 +472,20 @@ Enables basic storage and retrieval of dates and times.
 | **toUTCString**        | () =&gt; string                                                                                              | Returns a date converted to a string using Universal Coordinated Time (UTC).                                                            |
 | **toISOString**        | () =&gt; string                                                                                              | Returns a date as a string value in ISO format.                                                                                         |
 | **toJSON**             | (key?: any) =&gt; string                                                                                     | Used by the JSON.stringify method to enable the transformation of an object's data for JavaScript Object Notation (JSON) serialization. |
+
+
+#### LoginOptions
+
+Per-call options for {@link MsalPluginPlugin.login}.
+
+`loginHint` and `domainHint` are supplied here (not at initialization) so they can
+vary per sign-in.
+
+| Prop             | Type                | Description                                                                                                                                                                        |
+| ---------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`identifier`** | <code>string</code> | Account identifier for a silent login attempt — may be a username, `oid`, or `homeAccountId`. When omitted (or no matching account is cached) an interactive sign-in is performed. |
+| **`loginHint`**  | <code>string</code> | Pre-fills the username field on the sign-in screen for this sign-in.                                                                                                               |
+| **`domainHint`** | <code>string</code> | Restricts sign-in to accounts from the given domain for this sign-in.                                                                                                              |
 
 
 #### DeviceInfo

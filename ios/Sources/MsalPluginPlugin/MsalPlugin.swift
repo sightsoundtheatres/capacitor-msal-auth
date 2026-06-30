@@ -8,8 +8,6 @@ import MSAL
     private var authorityType: String?
     private var authorityUrl: URL?
     private var scopes: [String] = []
-    private var domainHint: String?
-    private var loginHint: String?
     private var redirectUri: String?
     private var bridgeViewController: UIViewController?
 
@@ -59,8 +57,6 @@ import MSAL
         self.authorityUrl = _authorityURL
         self.scopes = _scopes
         self.authorityType = _authorityType
-        self.domainHint = call.getString("domainHint")
-        self.loginHint = call.getString("loginHint")
         self.bridgeViewController = bridgeViewController
 
         do {
@@ -95,10 +91,13 @@ import MSAL
     }
 
     @objc public func login(_ call: CAPPluginCall) {
+        let loginHint = call.getString("loginHint")
+        let domainHint = call.getString("domainHint")
+
         if let identifier = call.getString("identifier") {
-            acquireTokenSilently(identifier: identifier, call: call)
+            acquireTokenSilently(identifier: identifier, loginHint: loginHint, domainHint: domainHint, call: call)
         } else {
-            acquireTokenInteractively(call: call)
+            acquireTokenInteractively(loginHint: loginHint, domainHint: domainHint, call: call)
         }
     }
 
@@ -316,22 +315,22 @@ import MSAL
         }
     }
 
-    @objc private func acquireTokenSilently(identifier: String, call: CAPPluginCall) {
+    @objc private func acquireTokenSilently(identifier: String, loginHint: String?, domainHint: String?, call: CAPPluginCall) {
         guard let applicationContext = self.applicationContext else {
             call.reject("PublicClientApplication not initialized")
             return
         }
 
         if let account = try? applicationContext.account(forUsername: identifier) {
-            acquireTokenSilentlyWithAccount(account: account, call: call)
+            acquireTokenSilentlyWithAccount(account: account, loginHint: loginHint, domainHint: domainHint, call: call)
         } else if let account = try? applicationContext.account(forIdentifier: identifier) {
-            acquireTokenSilentlyWithAccount(account: account, call: call)
+            acquireTokenSilentlyWithAccount(account: account, loginHint: loginHint, domainHint: domainHint, call: call)
         } else {
-            acquireTokenInteractively(call: call)
+            acquireTokenInteractively(loginHint: loginHint, domainHint: domainHint, call: call)
         }
     }
 
-    @objc private func acquireTokenSilentlyWithAccount(account: MSALAccount, call: CAPPluginCall) {
+    @objc private func acquireTokenSilentlyWithAccount(account: MSALAccount, loginHint: String?, domainHint: String?, call: CAPPluginCall) {
         guard let applicationContext = self.applicationContext else {
             call.reject("PublicClientApplication not initialized")
             return
@@ -340,7 +339,7 @@ import MSAL
         let parameters = MSALSilentTokenParameters(scopes: self.scopes, account: account)
         applicationContext.acquireTokenSilent(with: parameters) { (result, error) in
             if error != nil {
-                self.acquireTokenInteractively(call: call)
+                self.acquireTokenInteractively(loginHint: loginHint, domainHint: domainHint, call: call)
                 return
             }
             guard let result = result else {
@@ -352,7 +351,7 @@ import MSAL
 
     }
 
-    @objc private func acquireTokenInteractively(call: CAPPluginCall) {
+    @objc private func acquireTokenInteractively(loginHint: String?, domainHint: String?, call: CAPPluginCall) {
         guard let bridgeViewController = self.bridgeViewController else {
             call.reject("bridgeViewController not initialized")
             return
@@ -367,8 +366,8 @@ import MSAL
         let parameters = MSALInteractiveTokenParameters(scopes: self.scopes, webviewParameters: webviewParameters)
 
         parameters.promptType = .selectAccount
-        parameters.domainHint = self.domainHint
-        parameters.loginHint = self.loginHint
+        parameters.loginHint = loginHint
+        parameters.domainHint = domainHint
 
         applicationContext.acquireToken(with: parameters) { (result, error) in
             if error != nil {

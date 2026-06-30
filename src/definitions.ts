@@ -28,8 +28,6 @@ interface AuthenticationResult {
 export interface BaseOptions {
   clientId: string;
   tenantId?: string;
-  domainHint?: string;
-  loginHint?: string;
   authorityType?: 'AAD' | 'B2C';
   authorityUrl?: string;
   knownAuthorities?: string[];
@@ -38,8 +36,24 @@ export interface BaseOptions {
   scopes?: string[];
   redirectUri?: string;
 }
-export interface LoginOptions extends BaseOptions {
-  scopes?: string[];
+
+/**
+ * Per-call options for {@link MsalPluginPlugin.login}.
+ *
+ * `loginHint` and `domainHint` are supplied here (not at initialization) so they can
+ * vary per sign-in.
+ */
+export interface LoginOptions {
+  /**
+   * Account identifier for a silent login attempt — may be a username, `oid`, or
+   * `homeAccountId`. When omitted (or no matching account is cached) an interactive
+   * sign-in is performed.
+   */
+  identifier?: string;
+  /** Pre-fills the username field on the sign-in screen for this sign-in. */
+  loginHint?: string;
+  /** Restricts sign-in to accounts from the given domain for this sign-in. */
+  domainHint?: string;
 }
 export declare type LogoutOptions = BaseOptions;
 
@@ -58,7 +72,7 @@ export interface DeviceInfo {
 
 export interface MsalPluginPlugin {
   initializePcaInstance(options: BaseOptions): Promise<void>;
-  login(account?: { identifier?: string }): Promise<AuthenticationResult>;
+  login(options?: LoginOptions): Promise<AuthenticationResult>;
   logout(): Promise<void>;
   getAccounts(): Promise<{
     accounts: AccountInfo[];

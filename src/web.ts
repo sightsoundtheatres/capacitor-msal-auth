@@ -2,7 +2,7 @@ import type { AccountInfo, AuthenticationResult, IPublicClientApplication } from
 import { PublicClientApplication } from '@azure/msal-browser';
 import { WebPlugin } from '@capacitor/core';
 
-import type { BaseOptions, DeviceInfo, MsalPluginPlugin } from './definitions';
+import type { BaseOptions, DeviceInfo, LoginOptions, MsalPluginPlugin } from './definitions';
 
 let instance: IPublicClientApplication | undefined;
 export class MsalPluginWeb extends WebPlugin implements MsalPluginPlugin {
@@ -25,7 +25,7 @@ export class MsalPluginWeb extends WebPlugin implements MsalPluginPlugin {
     await instance.initialize();
   }
 
-  public async login(accountData?: { identifier?: string }): Promise<AuthenticationResult> {
+  public async login(options?: LoginOptions): Promise<AuthenticationResult> {
     if (!instance) {
       throw new Error('PublicClientApplication not initialized');
     }
@@ -35,21 +35,21 @@ export class MsalPluginWeb extends WebPlugin implements MsalPluginPlugin {
     }
 
     try {
-      if (accountData?.identifier) {
-        const identifier = accountData.identifier;
+      if (options?.identifier) {
+        const identifier = options.identifier;
         const account =
           instance.getAccount({ homeAccountId: identifier }) ||
           instance.getAccount({ localAccountId: identifier }) ||
           instance.getAccount({ username: identifier });
 
         if (account) {
-          return await this.acquireTokenSilently(account).catch(async () => {
-            return await this.acquireTokenInteractively();
+          return await this.acquireTokenSilently(account, options).catch(async () => {
+            return await this.acquireTokenInteractively(options);
           });
         }
       }
 
-      return await this.acquireTokenInteractively();
+      return await this.acquireTokenInteractively(options);
     } catch (error) {
       console.error('Error logging in', error);
       throw error;
@@ -80,7 +80,14 @@ export class MsalPluginWeb extends WebPlugin implements MsalPluginPlugin {
     return { isSharedDevice: false, mode: 'personal' };
   }
 
-  private async acquireTokenInteractively(): Promise<AuthenticationResult> {
+  private buildExtraQueryParameters(options?: LoginOptions): Record<string, string> {
+    return {
+      ...(options?.domainHint ? { domain_hint: options.domainHint } : {}),
+      ...(options?.loginHint ? { login_hint: options.loginHint } : {}),
+    };
+  }
+
+  private async acquireTokenInteractively(options?: LoginOptions): Promise<AuthenticationResult> {
     if (!instance) {
       throw new Error('PublicClientApplication not initialized');
     }
@@ -89,10 +96,7 @@ export class MsalPluginWeb extends WebPlugin implements MsalPluginPlugin {
       throw new Error('BaseOptions not initialized');
     }
 
-    const extraQueryParameters: Record<string, string> = {
-      ...(this.baseConfig?.domainHint ? { domain_hint: this.baseConfig.domainHint } : {}),
-      ...(this.baseConfig?.loginHint ? { login_hint: this.baseConfig.loginHint } : {}),
-    };
+    const extraQueryParameters = this.buildExtraQueryParameters(options);
     const result = await instance.loginPopup({
       scopes: this.baseConfig?.scopes ?? [],
       ...(Object.keys(extraQueryParameters).length ? { extraQueryParameters } : {}),
@@ -102,7 +106,7 @@ export class MsalPluginWeb extends WebPlugin implements MsalPluginPlugin {
     return result;
   }
 
-  private async acquireTokenSilently(account: AccountInfo): Promise<AuthenticationResult> {
+  private async acquireTokenSilently(account: AccountInfo, options?: LoginOptions): Promise<AuthenticationResult> {
     if (!instance) {
       throw new Error('PublicClientApplication not initialized');
     }
@@ -111,10 +115,7 @@ export class MsalPluginWeb extends WebPlugin implements MsalPluginPlugin {
       throw new Error('BaseOptions not initialized');
     }
 
-    const extraQueryParameters: Record<string, string> = {
-      ...(this.baseConfig?.domainHint ? { domain_hint: this.baseConfig.domainHint } : {}),
-      ...(this.baseConfig?.loginHint ? { login_hint: this.baseConfig.loginHint } : {}),
-    };
+    const extraQueryParameters = this.buildExtraQueryParameters(options);
     return await instance.acquireTokenSilent({
       scopes: this.baseConfig?.scopes ?? [],
       ...(Object.keys(extraQueryParameters).length ? { extraQueryParameters } : {}),
