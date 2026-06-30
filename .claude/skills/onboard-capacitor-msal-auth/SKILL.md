@@ -31,14 +31,17 @@ Ask the user (or detect) before editing — but **only ask for values for platfo
 per step 0. Don't invent these:
 
 Always needed:
+
 - `clientId` — Azure app registration → Application (client) ID
-- `tenant` — Azure tenant ID, or `common` (default if unsure)
+- `tenantId` — Azure tenant ID, or `common` (default if unsure)
 - `scopes` — API scopes the app requests (e.g. `User.Read`)
 
 Only if `ios/` exists:
+
 - iOS **bundle identifier** — detect from the Xcode project / `capacitor.config`
 
 Only if `android/` exists:
+
 - Android **package name** — detect from `android/app/src/main/AndroidManifest.xml`
 - Android **key hash** — generated in the Azure portal's Android platform config; ask the user
 
@@ -118,7 +121,7 @@ import { MsalPlugin } from '@sightsoundtheatres/capacitor-msal-auth';
 
 await MsalPlugin.initializePcaInstance({
   clientId: '<client id>',
-  tenant: '<tenant>',
+  tenantId: '<tenant id>',
   scopes: ['<scopes>'],
   keyHash: '<Android only>',
 });

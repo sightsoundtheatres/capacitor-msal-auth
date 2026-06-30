@@ -20,7 +20,7 @@ import MSAL
             return
         }
 
-        let _tenant = call.getString("tenant")
+        let _tenantId = call.getString("tenantId")
         let _authorityType = call.getString("authorityType") ?? "AAD"
 
         if _authorityType != "AAD" && _authorityType != "B2C" {
@@ -28,7 +28,7 @@ import MSAL
             return
         }
 
-        guard let _authorityURL = URL(string: call.getString("authorityUrl") ?? "https://login.microsoftonline.com/\(_tenant ?? "common")") else {
+        guard let _authorityURL = URL(string: call.getString("authorityUrl") ?? "https://login.microsoftonline.com/\(_tenantId ?? "common")") else {
             call.reject("Invalid authorityUrl or tenant specified")
             return
         }

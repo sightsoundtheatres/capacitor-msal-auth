@@ -10,7 +10,7 @@ public interface IPublicClientManager {
     void initializeInstance(
         String clientId,
         String domainHint,
-        String tenant,
+        String tenantId,
         AuthorityType authorityType,
         String customAuthorityUrl,
         String keyHash,

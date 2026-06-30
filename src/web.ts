@@ -14,7 +14,7 @@ export class MsalPluginWeb extends WebPlugin implements MsalPluginPlugin {
     instance = new PublicClientApplication({
       auth: {
         clientId: options.clientId,
-        authority: options.authorityUrl || `https://login.microsoftonline.com/${options.tenant || 'common'}/`,
+        authority: options.authorityUrl || `https://login.microsoftonline.com/${options.tenantId || 'common'}/`,
         ...(options.knownAuthorities ? { knownAuthorities: options.knownAuthorities } : {}),
         redirectUri: options.redirectUri || window.location.origin, // Points to window.location.origin. You must register this URI on Microsoft Entra admin center/App Registration.
       },

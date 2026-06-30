@@ -27,7 +27,7 @@ interface AuthenticationResult {
 
 export interface BaseOptions {
   clientId: string;
-  tenant?: string;
+  tenantId?: string;
   domainHint?: string;
   authorityType?: 'AAD' | 'B2C';
   authorityUrl?: string;

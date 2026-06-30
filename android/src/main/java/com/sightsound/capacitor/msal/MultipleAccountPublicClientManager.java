@@ -47,7 +47,7 @@ public class MultipleAccountPublicClientManager implements IPublicClientManager 
     public void initializeInstance(
         String clientId,
         String domainHint,
-        String tenant,
+        String tenantId,
         AuthorityType authorityType,
         String customAuthorityUrl,
         String keyHash,
@@ -59,7 +59,7 @@ public class MultipleAccountPublicClientManager implements IPublicClientManager 
             return;
         }
 
-        String tenantId = tenant != null ? tenant : "common";
+        tenantId = tenantId != null ? tenantId : "common";
         String authorityUrl = customAuthorityUrl != null ? customAuthorityUrl : "https://login.microsoftonline.com/" + tenantId;
         String urlEncodedKeyHash = URLEncoder.encode(keyHash, "UTF-8");
         String redirectUri = "msauth://" + this.context.getPackageName() + "/" + urlEncodedKeyHash;

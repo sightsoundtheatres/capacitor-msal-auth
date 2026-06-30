@@ -14,7 +14,7 @@ Collect these before starting — most steps just plug them in:
 | Value | Where it comes from |
 | ----- | ------------------- |
 | `clientId` | Azure app registration → Overview → Application (client) ID |
-| `tenant` | Azure tenant ID, or `common` / `organizations` / `consumers` (defaults to `common`) |
+| `tenantId` | Azure tenant ID, or `common` / `organizations` / `consumers` (defaults to `common`) |
 | iOS bundle identifier | Xcode → target → General → Bundle Identifier (e.g. `com.example.app`) |
 | Android package name | `android/app/src/main/AndroidManifest.xml` `package` attribute |
 | Android key hash | Generated in the Azure portal's Android platform config (Signature step) |
@@ -149,7 +149,7 @@ import { MsalPlugin } from '@sightsoundtheatres/capacitor-msal-auth';
 
 await MsalPlugin.initializePcaInstance({
     clientId: '<client id>',
-    tenant: '<tenant, defaults to common>',
+    tenantId: '<tenant id, defaults to common>',
     scopes: ['<scopes>'],
     keyHash: '<Android only: the key hash from step 2>',
 });

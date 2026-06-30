@@ -142,7 +142,7 @@ import { MsalPlugin } from "capacitor-msal-auth";
 
 await MsalPlugin.initializePcaInstance({
     clientId: '<client id>',
-    tenant: '<tenant, defaults to common>',
+    tenantId: '<tenant id, defaults to common>',
     domainHint: '<domainHint>',
     scopes: ['<scopes, defaults to no scopes>'],
     keyHash: '<Android only, the key hash as obtained above>',
@@ -261,7 +261,7 @@ addListener(eventName: 'accountChanged', listenerFunc: () => void) => Promise<Pl
 | Prop                              | Type                        |
 | --------------------------------- | --------------------------- |
 | **`clientId`**                    | <code>string</code>         |
-| **`tenant`**                      | <code>string</code>         |
+| **`tenantId`**                      | <code>string</code>         |
 | **`domainHint`**                  | <code>string</code>         |
 | **`authorityType`**               | <code>'AAD' \| 'B2C'</code> |
 | **`authorityUrl`**                | <code>string</code>         |

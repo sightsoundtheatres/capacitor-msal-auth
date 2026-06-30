@@ -19,7 +19,7 @@ public class MsalPluginManager {
     public void initializePcaInstance(
         String clientId,
         String domainHint,
-        String tenant,
+        String tenantId,
         AuthorityType authorityType,
         String customAuthorityUrl,
         String keyHash,
@@ -35,7 +35,7 @@ public class MsalPluginManager {
         singleAccountManager.initializeInstance(
             clientId,
             domainHint,
-            tenant,
+            tenantId,
             authorityType,
             customAuthorityUrl,
             keyHash,
@@ -50,7 +50,7 @@ public class MsalPluginManager {
             multipleAccountManager.initializeInstance(
                 clientId,
                 domainHint,
-                tenant,
+                tenantId,
                 authorityType,
                 customAuthorityUrl,
                 keyHash,
